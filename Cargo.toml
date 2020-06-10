@@ -1,0 +1,4 @@
+
+[workspace]
+members = ["plugin", "ui"]
+default-members = ["plugin", "ui"]
