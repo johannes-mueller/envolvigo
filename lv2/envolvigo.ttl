@@ -30,7 +30,7 @@ envolvigo:lv2
     doap:name "Envolvigo – Transient designer" ;
     doap:license <http://opensource.org/licenses/GPL-2.0> ;
 
-    #ui:ui envolvigo:ui ;
+    ui:ui envolvigo:ui ;
 
     lv2:port [
         a lv2:InputPort , lv2:ControlPort ;
@@ -43,88 +43,122 @@ envolvigo:lv2
         lv2:portProperty lv2:integer, lv2:toggled;
 	lv2:designation lv2:enabled;
         ] , [
+        a lv2:InputPort, lv2:ControlPort ;
+        lv2:index 1 ;
+        lv2:name "Sidechain" ;
+        lv2:symbol "use_sidechain" ;
+        lv2:default 0 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1 ;
+        lv2:portProperty lv2:integer, lv2:toggled ;
+        ] , [
         a lv2:InputPort , lv2:ControlPort ;
-	lv2:index 1 ;
+	lv2:index 2 ;
 	lv2:symbol "attackboost" ;
 	lv2:name "Attack Boost" ;
 	lv2:default   0.0 ;
 	lv2:minimum -30.0 ;
-	lv2:maximum  30.0;
-	units:unit units:db ;
-	] , [
-        a lv2:InputPort , lv2:ControlPort ;
-	lv2:index 2 ;
-	lv2:symbol "sustainboost" ;
-	lv2:name "Sustain Boost" ;
-	lv2:default   0.0 ;
-	lv2:minimum -30.0 ;
-	lv2:maximum  30.0;
+	lv2:maximum  30.0 ;
 	units:unit units:db ;
 	] , [
         a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 3 ;
-	lv2:symbol "attack" ;
+	lv2:symbol "attack_time" ;
 	lv2:name "Attack Time";
-	lv2:default 0.01 ;
-	lv2:minimum 0.001 ;
-	lv2:maximum 0.4 ;
+	lv2:default 0.035 ;
+	lv2:minimum 0.010 ;
+	lv2:maximum 0.400 ;
 	lv2:portProperty pprop:logarithmic;
 	pprop:rangeSteps 101;
 	units:unit units:s ;
 	] , [
-	a lv2:InputPort , lv2:ControlPort ;
+        a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 4 ;
-	lv2:symbol "release" ;
-	lv2:name "Release Time";
-	lv2:default 0.5 ;
-	lv2:minimum 0.05 ;
+	lv2:symbol "attack_release" ;
+	lv2:name "Attack Release";
+	lv2:default 0.035 ;
+	lv2:minimum 0.010 ;
+	lv2:maximum 0.400 ;
+	lv2:portProperty pprop:logarithmic;
+	pprop:rangeSteps 101;
+	units:unit units:s ;
+	] , [
+        a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 5 ;
+	lv2:symbol "sustainboost" ;
+	lv2:name "Sustain Boost" ;
+	lv2:default   0.0 ;
+	lv2:minimum -30.0 ;
+	lv2:maximum  30.0 ;
+	units:unit units:db ;
+	] , [
+	a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 6 ;
+	lv2:symbol "sustain_time" ;
+	lv2:name "Sustain Time";
+	lv2:default 0.035 ;
+	lv2:minimum 0.01 ;
 	lv2:maximum 5.0 ;
 	lv2:portProperty pprop:logarithmic;
 	pprop:rangeSteps 101;
 	units:unit units:s ;
         ], [
-        a lv2:OutputPort , lv2:ControlPort ;
-        lv2:index 5 ;
-        lv2:symbol "gain" ;
-        lv2:name "Gain" ;
-        lv2:maximum -160 ;
-        lv2:maximum 30 ;
+	a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 7 ;
+	lv2:symbol "sustain_attack" ;
+	lv2:name "Sustain Attack";
+	lv2:default 0.05 ;
+	lv2:minimum 0.01 ;
+	lv2:maximum 0.4 ;
+	lv2:portProperty pprop:logarithmic;
+	pprop:rangeSteps 101;
+	units:unit units:s ;
+        ], [
+        a lv2:InputPort , lv2:ControlPort ;
+        lv2:index 8 ;
+        lv2:symbol "outgain" ;
+        lv2:name "Output Gain" ;
+        lv2:default 0 ;
+        lv2:minimum -60 ;
+        lv2:maximum 6 ;
         units:unit units:db ;
         ], [
+        a lv2:InputPort , lv2:ControlPort ;
+        lv2:index 9 ;
+        lv2:symbol "mix" ;
+        lv2:name "Dry/Wet" ;
+        lv2:default 1 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1 ;
+        units:unit units:coeff ;
+        ], [
         a atom:AtomPort , lv2:InputPort ;
-        atom:bufferType atom:Object ;
+        atom:bufferType atom:Sequence ;
         lv2:designation lv2:control ;
-        lv2:index 6 ;
+        lv2:index 10 ;
+        lv2:symbol "control" ;
+        lv2:name "Control" ;
+        ], [
+        a atom:AtomPort , lv2:OutputPort ;
+        atom:bufferType atom:Sequence ;
+        lv2:designation lv2:control ;
+        lv2:index 11 ;
         lv2:symbol "notify" ;
         lv2:name "Notify" ;
         ], [
         a lv2:AudioPort , lv2:InputPort ;
-        lv2:index 7 ;
+        lv2:index 12 ;
         lv2:symbol "in" ;
         lv2:name "Input"
+        ], [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 13 ;
+        lv2:symbol "sidechain_in" ;
+        lv2:name "Sidechain Input" ;
+        lv2:portProperty lv2:isSideChain ;
         ] , [
         a lv2:AudioPort , lv2:OutputPort ;
-        lv2:index 8 ;
+        lv2:index 14 ;
         lv2:symbol "out" ;
         lv2:name "Output"
-        ] , [
-        a lv2:AudioPort , lv2:OutputPort ;
-        lv2:index 9 ;
-        lv2:symbol "atk_fast" ;
-        lv2:name "atk_fast" ;
-        ] , [
-        a lv2:AudioPort , lv2:OutputPort ;
-        lv2:index 10 ;
-        lv2:symbol "atk_slow" ;
-        lv2:name "atk_slow" ;
-        ] , [
-        a lv2:AudioPort , lv2:OutputPort ;
-        lv2:index 11 ;
-        lv2:symbol "rel_fast" ;
-        lv2:name "rel_fast" ;
-        ] , [
-        a lv2:AudioPort , lv2:OutputPort ;
-        lv2:index 12 ;
-        lv2:symbol "rel_slow" ;
-        lv2:name "rel_slow" ;
         ] .

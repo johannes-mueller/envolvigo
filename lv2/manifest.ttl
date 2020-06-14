@@ -3,14 +3,14 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
 
-@prefix $PLUGINNAME$: <https://johannes-mueller.org/lv2/$PLUGINNAME$#> .
+@prefix envolvigo: <https://johannes-mueller.org/lv2/envolvigo#> .
 
-$PLUGINNAME$:lv2
+envolvigo:lv2
 	a lv2:Plugin ;
  	lv2:binary <libenvolvigo_lv2.so> ;
 	rdfs:seeAlso <envolvigo.ttl> .
 
-$PLUGINNAME$:ui
+envolvigo:ui
 	a ui:X11UI ;
 	ui:binary <libenvolvigo_lv2_ui.so> ;
 	rdfs:seeAlso <envolvigo.ttl> .

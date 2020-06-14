@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 lv2 = "0.5.1"
-lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
+#lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
+lv2-ui = { path = "../../lv2-ui" }

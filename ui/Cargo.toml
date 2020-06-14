@@ -1,18 +1,29 @@
 [package]
-name = ""
+name = "envolvigo-lv2-ui"
 version = "0.0.1"
 authors = ["Johannes Mueller <github@johannes-mueller.org>"]
 edition = "2018"
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [dependencies]
+cascade = "0.1.4"
+
 lv2 = "0.5.1"
+lv2-sys = "1.1.0"
+
 cairo-rs = "0.8.1"
 pango = "0.8.0"
 pangocairo = "0.9.0"
 
-pugl-ui = { git = "https://github.com/johannes-mueller/pugl-ui" }
-pugl-sys = { git = "https://github.com/johannes-mueller/pugl-sys" }
-lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
+#pugl-ui = { git = "https://github.com/johannes-mueller/pugl-ui" }
+pugl-ui = { path = "../../pugl-ui" }
+#pugl-sys = { git = "https://github.com/johannes-mueller/pugl-sys" }
+pugl-sys = { path = "../../pugl-sys" }
+#lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
+lv2-ui = { path = "../../lv2-ui" }
+
+jilar = { path = "../../jilar" }
+
+urids = { path = "../urids" }
