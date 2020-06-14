@@ -1,0 +1,9 @@
+[package]
+name = "urids"
+version = "0.0.1"
+authors = ["Johannes Mueller <github@johannes-mueller.org>"]
+edition = "2018"
+
+[dependencies]
+lv2 = "0.5.1"
+lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
