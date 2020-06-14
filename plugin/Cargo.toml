@@ -1,5 +1,5 @@
 [package]
-name = ""
+name = "envolvigo-lv2"
 version = "0.0.1"
 authors = ["Johannes Mueller <github@johannes-mueller.org>"]
 edition = "2018"
@@ -9,3 +9,4 @@ crate-type = ["dylib"]
 
 [dependencies]
 lv2 = "0.5.1"
+urids = { path = "../urids" }
