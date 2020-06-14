@@ -1,0 +1,130 @@
+@prefix atom:    <http://lv2plug.in/ns/ext/atom#> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
+@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix pprop: <http://lv2plug.in/ns/ext/port-props#> .
+@prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
+
+@prefix envolvigo: <https://johannes-mueller.org/lv2/envolvigo#> .
+
+envolvigo:ui
+    a ui:X11UI ;
+    lv2:requiredFeature ui:idleInterface; lv2:extensionData ui:idleInterface;
+    lv2:requiredFeature urid:map ;
+    ui:portNotification [
+        ui:plugin envolvigo:lv2 ;
+        lv2:symbol "notify" ;
+        ui:notifyType: atom:Object
+    ] .
+
+
+
+envolvigo:lv2
+    a lv2:Plugin ,
+        lv2:AmplifierPlugin ;
+
+    lv2:project <https://johannes-mueller.org/lv2/envolvigo> ;
+    doap:name "Envolvigo – Transient designer" ;
+    doap:license <http://opensource.org/licenses/GPL-2.0> ;
+
+    #ui:ui envolvigo:ui ;
+
+    lv2:port [
+        a lv2:InputPort , lv2:ControlPort ;
+        lv2:index 0 ;
+        lv2:symbol "enable" ;
+        lv2:name "Enable" ;
+        lv2:default 1 ;
+	lv2:minimum 0 ;
+	lv2:maximum 1 ;
+        lv2:portProperty lv2:integer, lv2:toggled;
+	lv2:designation lv2:enabled;
+        ] , [
+        a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 1 ;
+	lv2:symbol "attackboost" ;
+	lv2:name "Attack Boost" ;
+	lv2:default   0.0 ;
+	lv2:minimum -30.0 ;
+	lv2:maximum  30.0;
+	units:unit units:db ;
+	] , [
+        a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 2 ;
+	lv2:symbol "sustainboost" ;
+	lv2:name "Sustain Boost" ;
+	lv2:default   0.0 ;
+	lv2:minimum -30.0 ;
+	lv2:maximum  30.0;
+	units:unit units:db ;
+	] , [
+        a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 3 ;
+	lv2:symbol "attack" ;
+	lv2:name "Attack Time";
+	lv2:default 0.01 ;
+	lv2:minimum 0.001 ;
+	lv2:maximum 0.4 ;
+	lv2:portProperty pprop:logarithmic;
+	pprop:rangeSteps 101;
+	units:unit units:s ;
+	] , [
+	a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 4 ;
+	lv2:symbol "release" ;
+	lv2:name "Release Time";
+	lv2:default 0.5 ;
+	lv2:minimum 0.05 ;
+	lv2:maximum 5.0 ;
+	lv2:portProperty pprop:logarithmic;
+	pprop:rangeSteps 101;
+	units:unit units:s ;
+        ], [
+        a lv2:OutputPort , lv2:ControlPort ;
+        lv2:index 5 ;
+        lv2:symbol "gain" ;
+        lv2:name "Gain" ;
+        lv2:maximum -160 ;
+        lv2:maximum 30 ;
+        units:unit units:db ;
+        ], [
+        a atom:AtomPort , lv2:InputPort ;
+        atom:bufferType atom:Object ;
+        lv2:designation lv2:control ;
+        lv2:index 6 ;
+        lv2:symbol "notify" ;
+        lv2:name "Notify" ;
+        ], [
+        a lv2:AudioPort , lv2:InputPort ;
+        lv2:index 7 ;
+        lv2:symbol "in" ;
+        lv2:name "Input"
+        ] , [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 8 ;
+        lv2:symbol "out" ;
+        lv2:name "Output"
+        ] , [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 9 ;
+        lv2:symbol "atk_fast" ;
+        lv2:name "atk_fast" ;
+        ] , [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 10 ;
+        lv2:symbol "atk_slow" ;
+        lv2:name "atk_slow" ;
+        ] , [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 11 ;
+        lv2:symbol "rel_fast" ;
+        lv2:name "rel_fast" ;
+        ] , [
+        a lv2:AudioPort , lv2:OutputPort ;
+        lv2:index 12 ;
+        lv2:symbol "rel_slow" ;
+        lv2:name "rel_slow" ;
+        ] .
