@@ -4,6 +4,7 @@ use std::f32::consts::PI;
 use itertools::izip;
 
 use lv2::prelude::*;
+use lv2::lv2_urid as lv2_urid;
 
 use urids;
 
@@ -29,6 +30,7 @@ struct Ports {
 #[derive(FeatureCollection)]
 struct Features<'a> {
     map: LV2Map<'a>,
+    options: lv2_urid::LV2Options
 }
 
 
@@ -159,6 +161,7 @@ struct Envolvigo {
     ui_notified: bool,
 
     sample_rate: f32,
+    max_block_length: usize,
 
     beat_detector: BeatDetector,
 
@@ -177,6 +180,7 @@ struct Envolvigo {
     outgain: Dezipper,
     mix: Dezipper,
 
+    gain_buffer: Vec<f32>,
 
     state: State,
 }
@@ -189,12 +193,20 @@ impl Plugin for Envolvigo {
 
     fn new(plugin_info: &PluginInfo, features: &mut Features<'static>) -> Option<Self> {
         let sample_rate = plugin_info.sample_rate() as f32;
+        let urids: urids::URIDs = features.map.populate_collection()?;
+        let max_block_length = features
+            .options
+            .retrieve_option(urids.max_block_length)
+            .and_then(|atom| atom.read(urids.atom.int, ()))
+            .unwrap_or(8192) as usize;
+
         Some(Self {
-            urids: features.map.populate_collection()?,
             ui_active: false,
             ui_notified: false,
+            urids,
 
             sample_rate,
+            max_block_length,
 
             beat_detector: BeatDetector::new(sample_rate, 0.2),
 
@@ -212,6 +224,8 @@ impl Plugin for Envolvigo {
 
             outgain: Dezipper::new(1.0, sample_rate),
             mix: Dezipper::new(1.0, sample_rate),
+
+            gain_buffer: Vec::with_capacity(max_block_length),
 
             state: Idle,
         })
@@ -251,9 +265,20 @@ impl Plugin for Envolvigo {
 
         self.check_notification_events(ports);
 
+        let nsamples = ports.input.len();
+
+        if self.gain_buffer.len() > nsamples {
+            self.gain_buffer.drain(..nsamples);
+        }
+
+        let mut attack_point: Option<usize> = match self.state {
+            Attack => Some(self.gain_buffer.len()),
+            _ => None
+        };
+
         for (in_frame, out_frame, sidechain_in) in izip!(
             ports.input.iter(), ports.output.iter_mut(),
-            ports.sidechain_input.iter()
+            ports.sidechain_input.iter(),
         ) {
             let attack_boost = self.attack_boost.process();
             let sustain_boost = self.sustain_boost.process();
@@ -272,6 +297,9 @@ impl Plugin for Envolvigo {
             if beat_detect > old_lvl && state != Disabled {
                 if state != Attack {
                     self.attack_envelope.reset(self.sustain_envelope.level());
+                    if attack_point.is_none() {
+                        attack_point = Some(self.gain_buffer.len());
+                    }
                 }
                 state = Attack;
             }
@@ -307,6 +335,8 @@ impl Plugin for Envolvigo {
                 }
             };
 
+            self.gain_buffer.push(gain);
+
             let out = *in_frame * gain * self.outgain.process();
             let mix = self.mix.process();
 
@@ -314,6 +344,47 @@ impl Plugin for Envolvigo {
         }
 
         self.state = state;
+
+        if self.ui_active {
+            let mut sequence_writer = ports.notify.init(
+                self.urids.atom.sequence,
+                TimeStampURID::Frames(self.urids.unit.frame)
+            ).unwrap();
+
+            if !self.ui_notified {
+                let mut object_writer = sequence_writer.init(
+                    TimeStamp::Frames(0),
+                    self.urids.atom.object,
+                    ObjectHeader {
+                        id: None,
+                        otype: self.urids.plugin_config.into_general(),
+                    }
+                ).unwrap();
+
+                object_writer.init(self.urids.sample_rate, None,
+                                   self.urids.atom.float,
+                                   self.sample_rate as f32);
+            }
+            self.ui_notified = true;
+
+            if let Some(point) = attack_point {
+                let mut object_writer = sequence_writer.init(
+                    TimeStamp::Frames(0),
+                    self.urids.atom.object,
+                    ObjectHeader {
+                        id: None,
+                        otype: self.urids.plugin_state.into_general(),
+                    }
+                ).unwrap();
+
+                let mut gain_writer: lv2_atom::vector::VectorWriter<Float> =
+                    object_writer.init(self.urids.gain_signal, None,
+                                       self.urids.atom.vector(),
+                                       self.urids.atom.float).unwrap();
+
+                gain_writer.append(&self.gain_buffer[point..]);
+            }
+        }
     }
 }
 
@@ -333,6 +404,7 @@ impl Envolvigo {
                 if header.otype == self.urids.ui_on {
                     println!("UI went on");
                     self.ui_active = true;
+                    self.ui_notified = false;
                 } else if header.otype == self.urids.ui_off {
                     println!("UI went off");
                     self.ui_active = false;

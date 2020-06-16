@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 #[macro_use]
 extern crate cascade;
 
@@ -14,6 +16,7 @@ use urids;
 use pugl_ui as pugl;
 use pugl_ui::layout;
 use pugl_ui::widget;
+use pugl_ui::widget::Widget;
 use pugl_sys as pugl_sys;
 use pugl_sys::pugl::PuglViewTrait;
 
@@ -102,8 +105,15 @@ struct EnvolvigoUI {
     outgain_dial: widget::WidgetHandle<jilar::Dial>,
     mix_dial: widget::WidgetHandle<jilar::Dial>,
 
+    osci: widget::WidgetHandle<jilar::Osci>,
+
     ports: UIPorts,
     write_handle: PluginPortWriteHandle,
+
+    gain_signal: Arc<RwLock<Vec<f32>>>,
+
+    sample_rate: f32,
+    display_time: f32,
 
     urids: urids::URIDs
 }
@@ -189,6 +199,22 @@ impl EnvolvigoUI {
             ..set_formater(&|v| format!("{:.0} %", v*100.0));
         });
 
+        let gain_signal = Arc::new(RwLock::new(Vec::new()));
+
+        let osci = ui.new_widget( cascade! {
+            jilar::Osci::new();
+            ..set_level_range(-24.0, 24.0);
+            ..set_min_height(180.0);
+            ..linear_major_xticks(10);
+            ..linear_major_yticks(12);
+            ..submit_draw_task(Box::new(OsciDrawings {
+                gain_signal: gain_signal.clone(),
+                sample_rate: 48000.0,
+                display_time: 1.0
+            }));
+        });
+
+        ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
 
         let controls_layout = ui.new_layouter::<layout::HorizontalLayouter>();
         ui.pack_to_layout(controls_layout.widget(), ui.root_layout(), layout::StackDirection::Back);
@@ -370,8 +396,12 @@ impl EnvolvigoUI {
             sustain_attack_dial,
             outgain_dial,
             mix_dial,
+            osci,
             ports,
             write_handle,
+            gain_signal,
+            sample_rate: 48000.0,
+            display_time: 1.0,
             urids
         })
     }
@@ -526,6 +556,35 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
             self.ui().widget(self.mix_dial).set_value(v as f64);
         }
 
+        let mut osci_repaint = false;
+
+        if let Some((_, object_reader)) = self.ports.notify.read(self.urids.atom.object, ()) {
+            for (header, atom) in object_reader {
+                if header.key == self.urids.sample_rate  {
+                    if let Some(sr) =  atom.read(self.urids.atom.float, ()) {
+                        self.sample_rate = sr;
+                    } else {
+                        eprintln!("expected float for sample rate, got something different");
+                    };
+                } else if header.key == self.urids.gain_signal {
+                    if let Some(new_gain_signal) = atom.read(self.urids.atom.vector(), self.urids.atom.float) {
+                        let nsamples = new_gain_signal.len();
+                        let mut gain_signal = self.gain_signal.write().unwrap();
+                        gain_signal.extend(new_gain_signal.iter().map(to_dB));
+                        if gain_signal.len() - nsamples
+                            > (self.display_time * self.sample_rate).ceil() as usize {
+                                gain_signal.drain(..nsamples);
+                            }
+                        osci_repaint = true;
+                    } else {
+                        eprintln!("expected vector of floats, got something different");
+                    }
+                }
+            }
+        }
+        if osci_repaint {
+            self.ui().widget(self.osci).ask_for_repaint();
+        }
     }
 }
 
@@ -585,4 +644,36 @@ impl RootWidget {
         self.focus_next = false;
         f
     }
+}
+
+struct OsciDrawings {
+    gain_signal: Arc<RwLock<Vec<f32>>>,
+    sample_rate: f64,
+    display_time: f64,
+}
+
+impl jilar::osci::DrawingTask for OsciDrawings {
+    fn draw(&self, osci: &jilar::osci::Osci, cr: &cairo::Context) {
+        let gain_signal = self.gain_signal.read().unwrap();
+
+        let samples_per_pixel = self.sample_rate * self.display_time / osci.size().w;
+
+        cr.set_source_rgba(0.0, 0.0, 1.0, 0.4);
+        cr.move_to(osci.pos().x, osci.pos().y + osci.size().h);
+
+        let mut x = osci.pos().x;
+        for chunk in gain_signal.chunks(samples_per_pixel.ceil() as usize) {
+            let val = (chunk.iter().sum::<f32>()/chunk.len() as f32) as f64;
+            cr.line_to(x, osci.scale_y(val));
+            x += 1.0;
+        }
+
+        cr.line_to(osci.pos().x + osci.size().w, osci.pos().y + osci.size().h);
+        cr.fill();
+    }
+}
+
+#[allow(non_snake_case)]
+fn to_dB(v: &f32) -> f32 {
+    20.0f32 * f32::log10(*v)
 }

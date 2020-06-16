@@ -25,5 +25,4 @@ pugl-sys = { path = "../../pugl-sys" }
 lv2-ui = { path = "../../lv2-ui" }
 
 jilar = { path = "../../jilar" }
-
 urids = { path = "../urids" }
