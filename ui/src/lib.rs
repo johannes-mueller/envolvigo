@@ -221,9 +221,11 @@ impl EnvolvigoUI {
             ..linear_major_yticks(12);
         });
 
+        ui.layouter_handle(ui.root_layout()).set_padding(5.0);
         ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
 
         let controls_layout = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.widget(controls_layout.widget()).lock_height();
         ui.pack_to_layout(controls_layout.widget(), ui.root_layout(), layout::StackDirection::Back);
 
         // Layout "Enabled" and "Sidechain"
@@ -239,6 +241,7 @@ impl EnvolvigoUI {
 
         // Layout "Attack dials"
         let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        ui.widget(sect_layout.widget()).lock_width();
         ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
 
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
@@ -257,6 +260,7 @@ impl EnvolvigoUI {
         ui.add_spacer(sect_layout, layout::StackDirection::Back);
 
         let subsect_layout = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.widget(subsect_layout.widget()).lock_width();
         ui.pack_to_layout(subsect_layout.widget(), sect_layout, layout::StackDirection::Back);
 
         let vl = ui.new_layouter::<layout::VerticalLayouter>();
@@ -295,6 +299,7 @@ impl EnvolvigoUI {
 
         // Layout "Sustain dials"
         let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        ui.widget(sect_layout.widget()).lock_width();
         ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
 
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
@@ -313,6 +318,7 @@ impl EnvolvigoUI {
         ui.add_spacer(sect_layout, layout::StackDirection::Back);
 
         let subsect_layout = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.widget(subsect_layout.widget()).lock_width();
         ui.pack_to_layout(subsect_layout.widget(), sect_layout, layout::StackDirection::Back);
 
         let vl = ui.new_layouter::<layout::VerticalLayouter>();
@@ -386,6 +392,7 @@ impl EnvolvigoUI {
         let ui = view.handle();
         ui.fit_window_size();
         ui.fit_window_min_size();
+        ui.make_resizable();
         ui.set_window_title("Envolvigo – a Transient Designer");
         ui.show_window();
 
