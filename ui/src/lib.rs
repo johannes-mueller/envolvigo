@@ -138,6 +138,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.0);
             ..set_hue(Some(0.1));
             ..set_large();
             ..set_formater(&|v| format!("{:.1} dB", v));
@@ -147,6 +148,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.035);
             ..set_hue(Some(0.1));
             ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
@@ -156,6 +158,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.035);
             ..set_hue(Some(0.1));
             ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
@@ -166,6 +169,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.0);
             ..set_hue(Some(0.7));
             ..set_large();
             ..set_formater(&|v| format!("{:.1} dB", v));
@@ -175,6 +179,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.035);
             ..set_hue(Some(0.7));
             ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
@@ -184,6 +189,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.05);
             ..set_hue(Some(0.7));
             ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
@@ -194,6 +200,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(0.0);
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
 
@@ -202,6 +209,7 @@ impl EnvolvigoUI {
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
+            ..set_default_value(1.0);
             ..set_formater(&|v| format!("{:.0} %", v*100.0));
         });
 
