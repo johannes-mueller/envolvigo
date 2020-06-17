@@ -110,10 +110,16 @@ struct EnvolvigoUI {
     ports: UIPorts,
     write_handle: PluginPortWriteHandle,
 
+    input_signal: Arc<RwLock<Vec<f32>>>,
+    output_signal: Arc<RwLock<Vec<f32>>>,
     gain_signal: Arc<RwLock<Vec<f32>>>,
+    attack_point: Arc<RwLock<Option<usize>>>,
+    release_point: Arc<RwLock<Option<usize>>>,
+    idle_point: Arc<RwLock<Option<usize>>>,
 
-    sample_rate: f32,
-    display_time: f32,
+    sample_rate: f64,
+    display_time: Arc<RwLock<f64>>,
+    drawing_task_submitted: bool,
 
     urids: urids::URIDs
 }
@@ -199,19 +205,12 @@ impl EnvolvigoUI {
             ..set_formater(&|v| format!("{:.0} %", v*100.0));
         });
 
-        let gain_signal = Arc::new(RwLock::new(Vec::new()));
-
         let osci = ui.new_widget( cascade! {
             jilar::Osci::new();
-            ..set_level_range(-24.0, 24.0);
+            ..set_level_range(-72.0, 12.0);
             ..set_min_height(180.0);
             ..linear_major_xticks(10);
             ..linear_major_yticks(12);
-            ..submit_draw_task(Box::new(OsciDrawings {
-                gain_signal: gain_signal.clone(),
-                sample_rate: 48000.0,
-                display_time: 1.0
-            }));
         });
 
         ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
@@ -399,9 +398,15 @@ impl EnvolvigoUI {
             osci,
             ports,
             write_handle,
-            gain_signal,
-            sample_rate: 48000.0,
-            display_time: 1.0,
+            input_signal: Arc::new(RwLock::new(Vec::new())),
+            output_signal: Arc::new(RwLock::new(Vec::new())),
+            gain_signal: Arc::new(RwLock::new(Vec::new())),
+            attack_point: Arc::new(RwLock::new(None)),
+            release_point: Arc::new(RwLock::new(None)),
+            idle_point: Arc::new(RwLock::new(None)),
+            sample_rate: 0.0,
+            display_time: Arc::new(RwLock::new(0.25)),
+            drawing_task_submitted: false,
             urids
         })
     }
@@ -538,7 +543,6 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
             self.ui().widget(self.attack_release_dial).set_value(v as f64);
         }
 
-
         if let Some(v) = self.ports.sustain_boost.changed_value() {
             self.ui().widget(self.sustain_boost_dial).set_value(v as f64);
         }
@@ -557,24 +561,85 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
         }
 
         let mut osci_repaint = false;
+        let mut received_sample_rate = false;
+        let displayed_sample_num = (*self.display_time.read().unwrap() * self.sample_rate).ceil() as usize;
 
         if let Some((_, object_reader)) = self.ports.notify.read(self.urids.atom.object, ()) {
             for (header, atom) in object_reader {
                 if header.key == self.urids.sample_rate  {
                     if let Some(sr) =  atom.read(self.urids.atom.float, ()) {
-                        self.sample_rate = sr;
+                        self.sample_rate = sr as f64;
+                        received_sample_rate = true;
                     } else {
                         eprintln!("expected float for sample rate, got something different");
                     };
+                } else if header.key == self.urids.attack_point {
+                    if let Some(ap) = atom.read(self.urids.atom.int, ()) {
+                        let mut attack_point = self.attack_point.write().unwrap();
+                        *attack_point = Some(ap as usize);
+                        let mut input_signal = self.input_signal.write().unwrap();
+                        let mut output_signal = self.output_signal.write().unwrap();
+                        let mut gain_signal = self.gain_signal.write().unwrap();
+
+                        let cut_samples = input_signal.len() - (0.01 * self.sample_rate).floor() as usize;
+                        if input_signal.len() != gain_signal.len() {
+                            println!("warning: input != gain {} {}", input_signal.len(), gain_signal.len());
+                        }
+                        println!("received attack point {} {} {} {}", ap, cut_samples, gain_signal.len(),
+                                 input_signal.iter().fold(-160.0f32, |a, v| a.max(*v)));
+
+                        gain_signal.drain(..cut_samples);
+                        input_signal.drain(..cut_samples);
+                        output_signal.drain(..cut_samples);
+                    } else {
+                        eprintln!("expected int for attack point, got something different");
+                    };
+                } else if header.key == self.urids.release_point {
+                    if let Some(p) = atom.read(self.urids.atom.int, ()) {
+                        let mut release_point = self.release_point.write().unwrap();
+                        let mut input_signal = self.input_signal.read().unwrap();
+                        *release_point = Some(p as usize + input_signal.len());
+                    } else {
+                        eprintln!("expected int for release point, got something different");
+                    };
+                } else if header.key == self.urids.idle_point {
+                    if let Some(p) = atom.read(self.urids.atom.int, ()) {
+                        let mut idle_point = self.idle_point.write().unwrap();
+                        let mut input_signal = self.input_signal.read().unwrap();
+                        *idle_point = Some(p as usize + input_signal.len());
+                    } else {
+                        eprintln!("expected int for idle point, got something different");
+                    };
                 } else if header.key == self.urids.gain_signal {
                     if let Some(new_gain_signal) = atom.read(self.urids.atom.vector(), self.urids.atom.float) {
-                        let nsamples = new_gain_signal.len();
                         let mut gain_signal = self.gain_signal.write().unwrap();
-                        gain_signal.extend(new_gain_signal.iter().map(to_dB));
-                        if gain_signal.len() - nsamples
-                            > (self.display_time * self.sample_rate).ceil() as usize {
-                                gain_signal.drain(..nsamples);
-                            }
+
+                        if gain_signal.len() < displayed_sample_num {
+                            gain_signal.extend(new_gain_signal);
+                        }
+                        //println!("{} gain samples", gain_signal.len());
+                        osci_repaint = true;
+                    } else {
+                        eprintln!("expected vector of floats, got something different");
+                    }
+                } else if header.key == self.urids.input_signal {
+                    if let Some(new_input_signal) = atom.read(self.urids.atom.vector(), self.urids.atom.float) {
+                        let mut input_signal = self.input_signal.write().unwrap();
+
+                        if input_signal.len() < displayed_sample_num {
+                            input_signal.extend(new_input_signal);
+                        }
+                        osci_repaint = true;
+                    } else {
+                        eprintln!("expected vector of floats, got something different");
+                    }
+                } else if header.key == self.urids.output_signal {
+                    if let Some(new_output_signal) = atom.read(self.urids.atom.vector(), self.urids.atom.float) {
+                        let mut output_signal = self.output_signal.write().unwrap();
+
+                        if output_signal.len() < displayed_sample_num {
+                            output_signal.extend(new_output_signal);
+                        }
                         osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
@@ -582,6 +647,24 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                 }
             }
         }
+
+        if received_sample_rate && !self.drawing_task_submitted {
+            self.ui().widget(self.osci).submit_draw_task(
+                Box::new(OsciDrawings {
+                    input_signal: self.input_signal.clone(),
+                    output_signal: self.output_signal.clone(),
+                    gain_signal: self.gain_signal.clone(),
+                    sample_rate: self.sample_rate,
+                    display_time: self.display_time.clone(),
+                    attack_point: self.attack_point.clone(),
+                    release_point: self.release_point.clone(),
+                    idle_point: self.idle_point.clone()
+                })
+            );
+            self.drawing_task_submitted = true;
+            osci_repaint = true;
+        }
+
         if osci_repaint {
             self.ui().widget(self.osci).ask_for_repaint();
         }
@@ -596,6 +679,7 @@ unsafe impl PluginUIInstanceDescriptor for EnvolvigoUI {
         cleanup: Some(PluginUIInstance::<Self>::cleanup),
         port_event: Some(PluginUIInstance::<Self>::port_event),
         extension_data: Some(PluginUIInstance::<Self>::extension_data)
+
     };
 }
 
@@ -647,33 +731,109 @@ impl RootWidget {
 }
 
 struct OsciDrawings {
+    input_signal: Arc<RwLock<Vec<f32>>>,
+    output_signal: Arc<RwLock<Vec<f32>>>,
     gain_signal: Arc<RwLock<Vec<f32>>>,
     sample_rate: f64,
-    display_time: f64,
+    display_time: Arc<RwLock<f64>>,
+    attack_point: Arc<RwLock<Option<usize>>>,
+    release_point: Arc<RwLock<Option<usize>>>,
+    idle_point: Arc<RwLock<Option<usize>>>
 }
 
 impl jilar::osci::DrawingTask for OsciDrawings {
     fn draw(&self, osci: &jilar::osci::Osci, cr: &cairo::Context) {
+        let input_signal = self.input_signal.read().unwrap();
+        let output_signal = self.output_signal.read().unwrap();
         let gain_signal = self.gain_signal.read().unwrap();
+        let display_time = *self.display_time.read().unwrap();
 
-        let samples_per_pixel = self.sample_rate * self.display_time / osci.size().w;
+        let samples_per_pixel =
+            (self.sample_rate * display_time / osci.size().w)
+            .ceil() as usize;
 
+        let attack_point = match *self.attack_point.read().unwrap() {
+            Some(ap) => ap,
+            None => return
+        };
+
+        let left = osci.pos().x;
+        let top = osci.pos().y;
+        let width = osci.size().w;
+        let height = osci.size().h;
+        let right = left + width;
+        let bottom = top + height;
+
+        /*
         cr.set_source_rgba(0.0, 0.0, 1.0, 0.4);
-        cr.move_to(osci.pos().x, osci.pos().y + osci.size().h);
+        cr.move_to(left, bottom);
 
-        let mut x = osci.pos().x;
-        for chunk in gain_signal.chunks(samples_per_pixel.ceil() as usize) {
+        let mut x = left;
+        for chunk in gain_signal.chunks(samples_per_pixel) {
             let val = (chunk.iter().sum::<f32>()/chunk.len() as f32) as f64;
             cr.line_to(x, osci.scale_y(val));
             x += 1.0;
+            if x > right {
+                break
+            }
         }
 
-        cr.line_to(osci.pos().x + osci.size().w, osci.pos().y + osci.size().h);
+        cr.line_to(right, osci.scale_y(0.0));
+        cr.line_to(right, bottom);
         cr.fill();
-    }
-}
+        */
+        cr.set_source_rgba(0.4, 0.4, 0.4, 0.4);
+        cr.set_line_width(0.5);
+        cr.set_line_join(cairo::LineJoin::Round);
 
-#[allow(non_snake_case)]
-fn to_dB(v: &f32) -> f32 {
-    20.0f32 * f32::log10(*v)
+        cr.move_to(left, bottom);
+        let mut x = left;
+        for chunk in input_signal[attack_point..].chunks(samples_per_pixel) {
+            let max = (chunk.iter().sum::<f32>()/chunk.len() as f32) as f64;
+            let max = (chunk.iter().fold(-160.0f32, |acc, &v| acc.max(v))) as f64;
+
+            cr.line_to(x, osci.scale_y(max));
+
+            x += 1.0;
+            if x > right {
+                break
+            }
+        }
+        cr.line_to(x-1.0, bottom);
+        cr.fill();
+
+        cr.set_source_rgb(1.0, 1.0, 1.0);
+        cr.set_line_width(0.25);
+        cr.set_line_join(cairo::LineJoin::Round);
+
+        let mut x = left;
+        for chunk in output_signal[attack_point..].chunks(samples_per_pixel) {
+            let val = (chunk.iter().sum::<f32>()/chunk.len() as f32) as f64;
+            let max = (chunk.iter().fold(-160.0f32, |acc, &v| acc.max(v))) as f64;
+            cr.line_to(x, osci.scale_y(max));
+
+            x += 1.0;
+            if x > right {
+                break
+            }
+        }
+        cr.stroke();
+
+
+        if let Some(release_point) = *self.release_point.read().unwrap() {
+            cr.set_source_rgb(1.0, 0.0, 0.0);
+            cr.set_line_width(0.25);
+            cr.move_to((release_point-attack_point) as f64/samples_per_pixel as f64, top);
+            cr.line_to((release_point-attack_point) as f64/samples_per_pixel as f64, bottom);
+            cr.stroke();
+        }
+
+        if let Some(idle_point) = *self.idle_point.read().unwrap() {
+            cr.set_source_rgb(0.0, 1.0, 0.0);
+            cr.set_line_width(0.25);
+            cr.move_to((idle_point-attack_point) as f64/samples_per_pixel as f64, top);
+            cr.line_to((idle_point-attack_point) as f64/samples_per_pixel as f64, bottom);
+            cr.stroke();
+        }
+    }
 }

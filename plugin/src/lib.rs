@@ -265,19 +265,14 @@ impl Plugin for Envolvigo {
 
         self.check_notification_events(ports);
 
-        let nsamples = ports.input.len();
+	self.gain_buffer.clear();
 
-        if self.gain_buffer.len() > nsamples {
-            self.gain_buffer.drain(..nsamples);
-        }
+        let mut attack_point: Option<usize> = None;
+        let mut release_point: Option<usize> = None;
+        let mut idle_point: Option<usize> = None;
 
-        let mut attack_point: Option<usize> = match self.state {
-            Attack => Some(self.gain_buffer.len()),
-            _ => None
-        };
-
-        for (in_frame, out_frame, sidechain_in) in izip!(
-            ports.input.iter(), ports.output.iter_mut(),
+        for ((sample_num, in_frame), out_frame, sidechain_in) in izip!(
+            ports.input.iter().enumerate(), ports.output.iter_mut(),
             ports.sidechain_input.iter(),
         ) {
             let attack_boost = self.attack_boost.process();
@@ -298,7 +293,7 @@ impl Plugin for Envolvigo {
                 if state != Attack {
                     self.attack_envelope.reset(self.sustain_envelope.level());
                     if attack_point.is_none() {
-                        attack_point = Some(self.gain_buffer.len());
+                        attack_point = Some(sample_num);
                     }
                 }
                 state = Attack;
@@ -312,6 +307,7 @@ impl Plugin for Envolvigo {
                     );
                     if delta_atk < 0.0 {
                         state = Release;
+                        release_point = Some(sample_num);
                         self.release_fast.reset(atk_slow);
                         self.release_slow.reset(0.0);
                         self.sustain_envelope.reset(self.attack_envelope.level());
@@ -324,6 +320,7 @@ impl Plugin for Envolvigo {
 
                     let delta_rel = rel_fast - rel_slow;
                     if delta_rel < 0.0 {
+                        idle_point = Some(sample_num);
                         state = Idle;
                     }
                     self.sustain_envelope.process(
@@ -367,23 +364,42 @@ impl Plugin for Envolvigo {
             }
             self.ui_notified = true;
 
+            let mut object_writer = sequence_writer.init(
+                TimeStamp::Frames(0),
+                self.urids.atom.object,
+                ObjectHeader {
+                    id: None,
+                    otype: self.urids.plugin_state.into_general(),
+                }
+            ).unwrap();
+
             if let Some(point) = attack_point {
-                let mut object_writer = sequence_writer.init(
-                    TimeStamp::Frames(0),
-                    self.urids.atom.object,
-                    ObjectHeader {
-                        id: None,
-                        otype: self.urids.plugin_state.into_general(),
-                    }
-                ).unwrap();
-
-                let mut gain_writer: lv2_atom::vector::VectorWriter<Float> =
-                    object_writer.init(self.urids.gain_signal, None,
-                                       self.urids.atom.vector(),
-                                       self.urids.atom.float).unwrap();
-
-                gain_writer.append(&self.gain_buffer[point..]);
+                object_writer.init(self.urids.attack_point, None, self.urids.atom.int, point as i32);
             }
+            if let Some(point) = release_point {
+                object_writer.init(self.urids.release_point, None, self.urids.atom.int, point as i32);
+            }
+            if let Some(point) = idle_point {
+                object_writer.init(self.urids.idle_point, None, self.urids.atom.int, point as i32);
+            }
+
+            let mut gain_writer: lv2_atom::vector::VectorWriter<Float> =
+                object_writer.init(self.urids.gain_signal, None,
+                                   self.urids.atom.vector(),
+                                   self.urids.atom.float).unwrap();
+            gain_writer.append(self.gain_buffer.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
+
+            let mut input_writer: lv2_atom::vector::VectorWriter<Float> =
+                object_writer.init(self.urids.input_signal, None,
+                                   self.urids.atom.vector(),
+                                   self.urids.atom.float).unwrap();
+            input_writer.append(ports.input.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
+
+            let mut output_writer: lv2_atom::vector::VectorWriter<Float> =
+                object_writer.init(self.urids.output_signal, None,
+                                   self.urids.atom.vector(),
+                                   self.urids.atom.float).unwrap();
+            output_writer.append(ports.output.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
         }
     }
 }
@@ -420,8 +436,8 @@ fn from_dB(v: f32) -> f32 {
 }
 
 #[allow(non_snake_case)]
-fn to_dB(v: f32) -> f32 {
-    20.0f32 * f32::log10(v)
+fn to_dB(v: &f32) -> f32 {
+    20.0f32 * f32::log10(v.abs().max(1e-8))
 }
 
 fn no_denormal(v: f32) -> f32 {
