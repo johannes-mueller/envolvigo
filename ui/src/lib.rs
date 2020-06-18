@@ -344,7 +344,7 @@ impl EnvolvigoUI {
             release_point: Arc::new(RwLock::new(None)),
             idle_point: Arc::new(RwLock::new(None)),
             sample_rate: 0.0,
-            display_time: Arc::new(RwLock::new(0.25)),
+            display_time: Arc::new(RwLock::new(0.5)),
             drawing_task_submitted: false,
             urids
         })

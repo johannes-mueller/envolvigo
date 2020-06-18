@@ -314,16 +314,18 @@ impl Plugin for Envolvigo {
                     let atk_slow = self.attack_slow.process(lvl);
                     let delta_atk = atk_fast - atk_slow;
 
-                    let gain = self.attack_smooth.process(
-                        from_dB(delta_atk * attack_boost / self.beat_detector.max_level())
+                    let pregain = self.attack_smooth.process(
+                        from_dB(delta_atk / self.beat_detector.max_level())
                     );
-                    if delta_atk < 0.0 {
+
+                    let gain = pregain.powf(attack_boost);
+                    if pregain < 1.0 {
                         println!("REL {} {} {} {}", lvl, delta_atk, atk_fast, atk_slow);
                         state = Release;
                         release_point = Some(sample_num);
                         self.release_fast.reset(atk_slow);
                         self.release_slow.reset(0.0);
-                        self.sustain_smooth.reset(gain);
+                        self.sustain_smooth.reset(pregain);
                     }
                     gain
                 }
@@ -332,18 +334,20 @@ impl Plugin for Envolvigo {
                     let rel_slow = self.release_slow.process(lvl);
 
                     let delta_rel = rel_fast - rel_slow;
-                    if delta_rel < 0.0 {
+                    let pregain = self.sustain_smooth.process(
+                        from_dB(
+                            delta_rel / self.attack_slow.level()
+                                * (15.0+3.0*ports.sustain_smooth.log10()) / 7.0
+                            // voodoo to compensate smoothening
+                        )
+                    );
+
+                    if to_dB(&pregain) < 0.0 {
                         println!("IDLE {} {} {} {}", lvl, delta_rel, rel_fast, rel_slow);
                         idle_point = Some(sample_num);
                         state = Idle;
                     }
-                    self.sustain_smooth.process(
-                        from_dB(
-                            delta_rel * sustain_boost / self.attack_slow.level()
-                                * (15.0+3.0*ports.sustain_smooth.log10()) / 7.0
-                            // voodoo to compensate smoothening
-                        )
-                    )
+                    pregain.powf(sustain_boost)
                 }
                 Idle | Disabled => {
                     self.sustain_smooth.process(1.0)
