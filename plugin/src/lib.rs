@@ -2,22 +2,19 @@ use std::f32::consts::PI;
 
 #[macro_use] extern crate itertools;
 use itertools::izip;
-
 use lv2::prelude::*;
 use lv2::lv2_urid as lv2_urid;
-
 use urids;
-
 #[derive(PortCollection)]
 struct Ports {
     enabled: InputPort<Control>,
     use_sidechain: InputPort<Control>,
     attack_boost: InputPort<Control>,
-    attack_time: InputPort<Control>,
-    attack_release: InputPort<Control>,
+    attack_smooth: InputPort<Control>,
     sustain_boost: InputPort<Control>,
-    sustain_time: InputPort<Control>,
-    sustain_attack: InputPort<Control>,
+    sustain_smooth: InputPort<Control>,
+    gain_attack: InputPort<Control>,
+    gain_release: InputPort<Control>,
     outgain: InputPort<Control>,
     mix: InputPort<Control>,
     control: InputPort<AtomPort>,
@@ -32,7 +29,6 @@ struct Features<'a> {
     map: LV2Map<'a>,
     options: lv2_urid::LV2Options
 }
-
 
 struct Dezipper {
     target: f32,
@@ -72,6 +68,7 @@ struct EnvelopeDetector {
     sample_rate: f32,
 
     current_level: f32,
+    y1: f32
 }
 
 impl EnvelopeDetector {
@@ -81,6 +78,7 @@ impl EnvelopeDetector {
             release: 0.0,
             sample_rate,
             current_level: 0.0,
+            y1: 0.0
         }
     }
 
@@ -99,10 +97,12 @@ impl EnvelopeDetector {
 
     fn set_params(&mut self, attack_time: f32, release_time: f32) {
         self.attack = (-1.0 / (self.sample_rate * attack_time)).exp();
+//        self.y1 = self.attack;
         self.release = (-1.0 / (self.sample_rate * release_time)).exp();
     }
 
     fn reset(&mut self, level: f32) {
+        self.y1 = self.attack;
         self.current_level = level;
     }
 }
@@ -144,6 +144,7 @@ impl BeatDetector {
     }
 }
 
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 enum State {
     Attack,
@@ -165,17 +166,19 @@ struct Envolvigo {
 
     beat_detector: BeatDetector,
 
+    attack_smooth: EnvelopeDetector,
+    sustain_smooth: EnvelopeDetector,
+
     attack_slow: EnvelopeDetector,
     attack_fast: EnvelopeDetector,
 
     release_slow: EnvelopeDetector,
     release_fast: EnvelopeDetector,
 
-    attack_envelope: EnvelopeDetector,
-    sustain_envelope: EnvelopeDetector,
-
     attack_boost: Dezipper,
     sustain_boost: Dezipper,
+
+    result_gain: EnvelopeDetector,
 
     outgain: Dezipper,
     mix: Dezipper,
@@ -210,6 +213,9 @@ impl Plugin for Envolvigo {
 
             beat_detector: BeatDetector::new(sample_rate, 0.2),
 
+            attack_smooth: EnvelopeDetector::new(sample_rate),
+            sustain_smooth: EnvelopeDetector::new(sample_rate),
+
             attack_slow: EnvelopeDetector::new(sample_rate),
             attack_fast: EnvelopeDetector::new(sample_rate),
 
@@ -219,8 +225,7 @@ impl Plugin for Envolvigo {
             attack_boost: Dezipper::new(0.0, sample_rate),
             sustain_boost: Dezipper::new(0.0, sample_rate),
 
-            attack_envelope: EnvelopeDetector::new(sample_rate),
-            sustain_envelope: EnvelopeDetector::new(sample_rate),
+            result_gain: EnvelopeDetector::new(sample_rate),
 
             outgain: Dezipper::new(1.0, sample_rate),
             mix: Dezipper::new(1.0, sample_rate),
@@ -232,17 +237,18 @@ impl Plugin for Envolvigo {
     }
 
     fn run(&mut self, ports: &mut Ports, _features: &mut ()) {
-        self.attack_fast.set_params(0.0, *ports.attack_time);
-        self.attack_slow.set_params(*ports.attack_time, 0.2);
+        self.attack_fast.set_params(0.0, 0.02);
+        self.attack_slow.set_params(0.02, 5.0);
 
-        self.release_fast.set_params(0.2, *ports.sustain_time);
-        self.release_slow.set_params(*ports.sustain_time, 0.2);
+        self.release_fast.set_params(0.01, 0.02);
+        self.release_slow.set_params(0.02, 0.025);
 
-        self.attack_boost.set_value(*ports.attack_boost);
-        self.sustain_boost.set_value(*ports.sustain_boost);
+        self.attack_boost.set_value(ports.attack_boost.max(-30.0).min(30.0));
+        self.sustain_boost.set_value(ports.sustain_boost.max(-30.0).min(30.0));
 
-        self.attack_envelope.set_params(0.001, *ports.attack_release);
-        self.sustain_envelope.set_params(*ports.sustain_attack, 0.01);
+        self.attack_smooth.set_params(0.0, ports.attack_smooth.max(0.0001).min(0.05));
+        let sustain_smooth = ports.sustain_smooth.max(0.001).min(0.2);
+        self.sustain_smooth.set_params(sustain_smooth, sustain_smooth);
 
         let (mut state, mix) = match *ports.enabled > 0.5{
             true => (
@@ -260,7 +266,7 @@ impl Plugin for Envolvigo {
 
         let sidechain = *ports.use_sidechain > 0.5;
 
-        self.outgain.set_value(from_dB(ports.outgain.max(-50.0).min(6.0)));
+        self.outgain.set_value(from_dB(ports.outgain.max(-60.0).min(6.0)));
         self.mix.set_value(mix);
 
         self.check_notification_events(ports);
@@ -284,14 +290,17 @@ impl Plugin for Envolvigo {
                 in_frame
             }.abs();
 
+
             let old_lvl = self.beat_detector.level();
+            //println!("{} {} {}", lvl, old_lvl, in_frame);
             let beat_detect = self.beat_detector.process(lvl);
-            let atk_fast = self.attack_fast.process(lvl);
-            let atk_slow = self.attack_slow.process(lvl);
 
             if beat_detect > old_lvl && state != Disabled {
                 if state != Attack {
-                    self.attack_envelope.reset(self.sustain_envelope.level());
+                    self.attack_fast.reset(0.0);
+                    self.attack_slow.reset(0.0);
+                    self.attack_smooth.reset(self.result_gain.level());
+                    println!("ATK {} {}", lvl, old_lvl);
                     if attack_point.is_none() {
                         attack_point = Some(sample_num);
                     }
@@ -301,16 +310,20 @@ impl Plugin for Envolvigo {
 
             let gain = match state {
                 Attack => {
+                    let atk_fast = self.attack_fast.process(lvl);
+                    let atk_slow = self.attack_slow.process(lvl);
                     let delta_atk = atk_fast - atk_slow;
-                    let gain = self.attack_envelope.process(
+
+                    let gain = self.attack_smooth.process(
                         from_dB(delta_atk * attack_boost / self.beat_detector.max_level())
                     );
                     if delta_atk < 0.0 {
+                        println!("REL {} {} {} {}", lvl, delta_atk, atk_fast, atk_slow);
                         state = Release;
                         release_point = Some(sample_num);
                         self.release_fast.reset(atk_slow);
                         self.release_slow.reset(0.0);
-                        self.sustain_envelope.reset(self.attack_envelope.level());
+                        self.sustain_smooth.reset(gain);
                     }
                     gain
                 }
@@ -320,17 +333,23 @@ impl Plugin for Envolvigo {
 
                     let delta_rel = rel_fast - rel_slow;
                     if delta_rel < 0.0 {
+                        println!("IDLE {} {} {} {}", lvl, delta_rel, rel_fast, rel_slow);
                         idle_point = Some(sample_num);
                         state = Idle;
                     }
-                    self.sustain_envelope.process(
-                        from_dB(delta_rel * sustain_boost * self.beat_detector.max_level())
+                    self.sustain_smooth.process(
+                        from_dB(
+                            delta_rel * sustain_boost / self.attack_slow.level()
+                                * (15.0+3.0*ports.sustain_smooth.log10()) / 7.0
+                            // voodoo to compensate smoothening
+                        )
                     )
                 }
                 Idle | Disabled => {
-                    1.0
+                    self.sustain_smooth.process(1.0)
                 }
             };
+            let gain = self.result_gain.process(gain);
 
             self.gain_buffer.push(gain);
 

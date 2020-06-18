@@ -30,11 +30,11 @@ struct UIPorts {
     enabled: ControlPort,
     use_sidechain: ControlPort,
     attack_boost: ControlPort,
+    attack_smooth: ControlPort,
     sustain_boost: ControlPort,
-    attack_time: ControlPort,
-    attack_release: ControlPort,
-    sustain_time: ControlPort,
-    sustain_attack: ControlPort,
+    sustain_smooth: ControlPort,
+    gain_attack: ControlPort,
+    gain_release: ControlPort,
     outgain: ControlPort,
     mix: ControlPort,
     control: UIAtomPort,
@@ -47,11 +47,11 @@ impl UIPorts {
             enabled: ControlPort::new(0),
             use_sidechain: ControlPort::new(1),
             attack_boost: ControlPort::new(2),
-            attack_time: ControlPort::new(3),
-            attack_release: ControlPort::new(4),
-            sustain_boost: ControlPort::new(5),
-            sustain_time: ControlPort::new(6),
-            sustain_attack: ControlPort::new(7),
+            attack_smooth: ControlPort::new(3),
+            sustain_boost: ControlPort::new(4),
+            sustain_smooth: ControlPort::new(5),
+            gain_attack: ControlPort::new(6),
+            gain_release: ControlPort::new(7),
             outgain: ControlPort::new(8),
             mix: ControlPort::new(9),
             control: UIAtomPort::new(urid, 10),
@@ -66,11 +66,11 @@ impl UIPortsTrait for UIPorts {
             0 => Some(&mut self.enabled),
             1 => Some(&mut self.use_sidechain),
             2 => Some(&mut self.attack_boost),
-            3 => Some(&mut self.attack_time),
-            4 => Some(&mut self.attack_release),
-            5 => Some(&mut self.sustain_boost),
-            6 => Some(&mut self.sustain_time),
-            7 => Some(&mut self.sustain_attack),
+            3 => Some(&mut self.attack_smooth),
+            4 => Some(&mut self.sustain_boost),
+            5 => Some(&mut self.sustain_smooth),
+            6 => Some(&mut self.gain_attack),
+            7 => Some(&mut self.gain_release),
             8 => Some(&mut self.outgain),
             9 => Some(&mut self.mix),
             _ => None
@@ -95,12 +95,10 @@ struct EnvolvigoUI {
     use_sidechain_button: widget::WidgetHandle<jilar::Button>,
 
     attack_boost_dial: widget::WidgetHandle<jilar::Dial>,
-    attack_time_dial: widget::WidgetHandle<jilar::Dial>,
-    attack_release_dial: widget::WidgetHandle<jilar::Dial>,
+    attack_smooth_dial: widget::WidgetHandle<jilar::Dial>,
 
     sustain_boost_dial: widget::WidgetHandle<jilar::Dial>,
-    sustain_time_dial: widget::WidgetHandle<jilar::Dial>,
-    sustain_attack_dial: widget::WidgetHandle<jilar::Dial>,
+    sustain_smooth_dial: widget::WidgetHandle<jilar::Dial>,
 
     outgain_dial: widget::WidgetHandle<jilar::Dial>,
     mix_dial: widget::WidgetHandle<jilar::Dial>,
@@ -140,27 +138,15 @@ impl EnvolvigoUI {
             });
             ..set_default_value(0.0);
             ..set_hue(Some(0.1));
-            ..set_large();
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
-        let attack_time_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.01, 0.4, 0.05);
+        let attack_smooth_dial = ui.new_widget( cascade! {
+            jilar::Dial::new(0.0001, 0.05, 0.01);
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
             ..set_hue(Some(0.1));
-            ..set_small();
-            ..set_formater(&|v| format!("{:.1} ms", v*1000.));
-        });
-        let attack_release_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.001, 0.4, 0.05);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
-                jilar::dial::draw_angle_tics(d, cr, 11)
-            });
-            ..set_default_value(0.035);
-            ..set_hue(Some(0.1));
-            ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
         });
 
@@ -171,27 +157,15 @@ impl EnvolvigoUI {
             });
             ..set_default_value(0.0);
             ..set_hue(Some(0.7));
-            ..set_large();
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
-        let sustain_time_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.01, 5.0, 0.5);
+        let sustain_smooth_dial = ui.new_widget( cascade! {
+            jilar::Dial::new(0.001, 0.2, 0.01);
             ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
             ..set_hue(Some(0.7));
-            ..set_small();
-            ..set_formater(&|v| format!("{:.1} ms", v*1000.));
-        });
-        let sustain_attack_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.01, 0.4, 0.05);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
-                jilar::dial::draw_angle_tics(d, cr, 11)
-            });
-            ..set_default_value(0.05);
-            ..set_hue(Some(0.7));
-            ..set_small();
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
         });
 
@@ -259,39 +233,16 @@ impl EnvolvigoUI {
 
         ui.add_spacer(sect_layout, layout::StackDirection::Back);
 
-        let subsect_layout = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.widget(subsect_layout.widget()).lock_width();
-        ui.pack_to_layout(subsect_layout.widget(), sect_layout, layout::StackDirection::Back);
-
-        let vl = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(vl.widget(), subsect_layout, layout::StackDirection::Back);
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(attack_time_dial, hl, layout::StackDirection::Back);
+        ui.pack_to_layout(attack_smooth_dial, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
-        let lb = ui.new_widget(jilar::Label::new("Time"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-
-        ui.add_spacer(subsect_layout, layout::StackDirection::Back);
-
-        let vl = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(vl.widget(), subsect_layout, layout::StackDirection::Back);
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(attack_release_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        let lb = ui.new_widget(jilar::Label::new("Release"));
+        let lb = ui.new_widget(jilar::Label::new("Smooth"));
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
@@ -317,39 +268,16 @@ impl EnvolvigoUI {
 
         ui.add_spacer(sect_layout, layout::StackDirection::Back);
 
-        let subsect_layout = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.widget(subsect_layout.widget()).lock_width();
-        ui.pack_to_layout(subsect_layout.widget(), sect_layout, layout::StackDirection::Back);
-
-        let vl = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(vl.widget(), subsect_layout, layout::StackDirection::Back);
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(sustain_time_dial, hl, layout::StackDirection::Back);
+        ui.pack_to_layout(sustain_smooth_dial, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Time"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-
-        ui.add_spacer(subsect_layout, layout::StackDirection::Back);
-
-        let vl = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(vl.widget(), subsect_layout, layout::StackDirection::Back);
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(sustain_attack_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), vl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        let lb = ui.new_widget(jilar::Label::new("Attack"));
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
@@ -369,8 +297,6 @@ impl EnvolvigoUI {
         let lb = ui.new_widget(jilar::Label::new("Output level"));
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
-
-        ui.add_spacer(subsect_layout, layout::StackDirection::Back);
 
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
         ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
@@ -403,11 +329,9 @@ impl EnvolvigoUI {
             enabled_button,
             use_sidechain_button,
             attack_boost_dial,
-            attack_time_dial,
-            attack_release_dial,
             sustain_boost_dial,
-            sustain_time_dial,
-            sustain_attack_dial,
+            attack_smooth_dial,
+            sustain_smooth_dial,
             outgain_dial,
             mix_dial,
             osci,
@@ -504,26 +428,18 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
             self.ports.attack_boost.set_value(v as f32);
             self.write_handle.write_port(&self.ports.attack_boost);
         }
-        if let Some(v) = self.ui().widget(self.attack_time_dial).changed_value() {
-            self.ports.attack_time.set_value(v as f32);
-            self.write_handle.write_port(&self.ports.attack_time);
-        }
-        if let Some(v) = self.ui().widget(self.attack_release_dial).changed_value() {
-            self.ports.attack_release.set_value(v as f32);
-            self.write_handle.write_port(&self.ports.attack_release);
+        if let Some(v) = self.ui().widget(self.attack_smooth_dial).changed_value() {
+            self.ports.attack_smooth.set_value(v as f32);
+            self.write_handle.write_port(&self.ports.attack_smooth);
         }
 
         if let Some(v) = self.ui().widget(self.sustain_boost_dial).changed_value() {
             self.ports.sustain_boost.set_value(v as f32);
             self.write_handle.write_port(&self.ports.sustain_boost);
         }
-        if let Some(v) = self.ui().widget(self.sustain_time_dial).changed_value() {
-            self.ports.sustain_time.set_value(v as f32);
-            self.write_handle.write_port(&self.ports.sustain_time);
-        }
-        if let Some(v) = self.ui().widget(self.sustain_attack_dial).changed_value() {
-            self.ports.sustain_attack.set_value(v as f32);
-            self.write_handle.write_port(&self.ports.sustain_attack);
+        if let Some(v) = self.ui().widget(self.sustain_smooth_dial).changed_value() {
+            self.ports.sustain_smooth.set_value(v as f32);
+            self.write_handle.write_port(&self.ports.sustain_smooth);
         }
 
         if let Some(v) = self.ui().widget(self.outgain_dial).changed_value() {
@@ -551,21 +467,15 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
         if let Some(v) = self.ports.attack_boost.changed_value() {
             self.ui().widget(self.attack_boost_dial).set_value(v as f64);
         }
-        if let Some(v) = self.ports.attack_time.changed_value() {
-            self.ui().widget(self.attack_time_dial).set_value(v as f64);
-        }
-        if let Some(v) = self.ports.attack_release.changed_value() {
-            self.ui().widget(self.attack_release_dial).set_value(v as f64);
+        if let Some(v) = self.ports.attack_smooth.changed_value() {
+            self.ui().widget(self.attack_smooth_dial).set_value(v as f64);
         }
 
         if let Some(v) = self.ports.sustain_boost.changed_value() {
             self.ui().widget(self.sustain_boost_dial).set_value(v as f64);
         }
-        if let Some(v) = self.ports.sustain_time.changed_value() {
-            self.ui().widget(self.sustain_time_dial).set_value(v as f64);
-        }
-        if let Some(v) = self.ports.sustain_attack.changed_value() {
-            self.ui().widget(self.sustain_attack_dial).set_value(v as f64);
+        if let Some(v) = self.ports.sustain_smooth.changed_value() {
+            self.ui().widget(self.sustain_smooth_dial).set_value(v as f64);
         }
 
         if let Some(v) = self.ports.outgain.changed_value() {

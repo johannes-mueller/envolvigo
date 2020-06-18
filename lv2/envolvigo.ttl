@@ -54,7 +54,7 @@ envolvigo:lv2
         ] , [
         a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 2 ;
-	lv2:symbol "attackboost" ;
+	lv2:symbol "attack_boost" ;
 	lv2:name "Attack Boost" ;
 	lv2:default   0.0 ;
 	lv2:minimum -30.0 ;
@@ -63,28 +63,17 @@ envolvigo:lv2
 	] , [
         a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 3 ;
-	lv2:symbol "attack_time" ;
-	lv2:name "Attack Time";
+	lv2:symbol "attack_smooth" ;
+	lv2:name "Attack smooth";
 	lv2:default 0.035 ;
-	lv2:minimum 0.010 ;
-	lv2:maximum 0.400 ;
+	lv2:minimum 0.0001 ;
+	lv2:maximum 0.05 ;
 	lv2:portProperty pprop:logarithmic;
 	pprop:rangeSteps 101;
 	units:unit units:s ;
 	] , [
         a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 4 ;
-	lv2:symbol "attack_release" ;
-	lv2:name "Attack Release";
-	lv2:default 0.035 ;
-	lv2:minimum 0.010 ;
-	lv2:maximum 0.400 ;
-	lv2:portProperty pprop:logarithmic;
-	pprop:rangeSteps 101;
-	units:unit units:s ;
-	] , [
-        a lv2:InputPort , lv2:ControlPort ;
-	lv2:index 5 ;
 	lv2:symbol "sustainboost" ;
 	lv2:name "Sustain Boost" ;
 	lv2:default   0.0 ;
@@ -93,25 +82,36 @@ envolvigo:lv2
 	units:unit units:db ;
 	] , [
 	a lv2:InputPort , lv2:ControlPort ;
-	lv2:index 6 ;
-	lv2:symbol "sustain_time" ;
-	lv2:name "Sustain Time";
+	lv2:index 5 ;
+	lv2:symbol "sustain_smooth" ;
+	lv2:name "Sustain smooth";
 	lv2:default 0.035 ;
-	lv2:minimum 0.01 ;
-	lv2:maximum 5.0 ;
+	lv2:minimum 0.001 ;
+	lv2:maximum 0.2 ;
 	lv2:portProperty pprop:logarithmic;
 	pprop:rangeSteps 101;
 	units:unit units:s ;
         ], [
 	a lv2:InputPort , lv2:ControlPort ;
+	lv2:index 6 ;
+	lv2:symbol "gain_attack" ;
+	lv2:name "Gain attack";
+	lv2:default 0.0001 ;
+	lv2:minimum 0.0001 ;
+	lv2:maximum 0.0001 ;
+        lv2:portProperty pprop:notOnGUI ;
+	lv2:portProperty pprop:logarithmic ;
+	units:unit units:s ;
+        ], [
+	a lv2:InputPort , lv2:ControlPort ;
 	lv2:index 7 ;
-	lv2:symbol "sustain_attack" ;
-	lv2:name "Sustain Attack";
-	lv2:default 0.05 ;
-	lv2:minimum 0.01 ;
-	lv2:maximum 0.4 ;
-	lv2:portProperty pprop:logarithmic;
-	pprop:rangeSteps 101;
+	lv2:symbol "gain_relese" ;
+	lv2:name "Gain release";
+	lv2:default 0.001 ;
+	lv2:minimum 0.001 ;
+	lv2:maximum 0.001 ;
+        lv2:portProperty pprop:notOnGUI ;
+	lv2:portProperty pprop:logarithmic ;
 	units:unit units:s ;
         ], [
         a lv2:InputPort , lv2:ControlPort ;
