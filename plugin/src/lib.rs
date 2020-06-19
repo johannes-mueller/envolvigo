@@ -184,6 +184,7 @@ struct Envolvigo {
     mix: Dezipper,
 
     gain_buffer: Vec<f32>,
+    input_buffer: Vec<f32>,
 
     state: State,
 }
@@ -231,6 +232,7 @@ impl Plugin for Envolvigo {
             mix: Dezipper::new(1.0, sample_rate),
 
             gain_buffer: Vec::with_capacity(max_block_length),
+            input_buffer: Vec::with_capacity(max_block_length),
 
             state: Idle,
         })
@@ -276,6 +278,11 @@ impl Plugin for Envolvigo {
         let mut attack_point: Option<usize> = None;
         let mut release_point: Option<usize> = None;
         let mut idle_point: Option<usize> = None;
+
+        if self.ui_active {
+            self.input_buffer.clear();
+            self.input_buffer.extend(ports.input.iter().map(to_dB));
+        }
 
         for ((sample_num, in_frame), out_frame, sidechain_in) in izip!(
             ports.input.iter().enumerate(), ports.output.iter_mut(),
@@ -416,7 +423,7 @@ impl Plugin for Envolvigo {
                 object_writer.init(self.urids.input_signal, None,
                                    self.urids.atom.vector(),
                                    self.urids.atom.float).unwrap();
-            input_writer.append(ports.input.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
+            input_writer.append(&self.input_buffer);
 
             let mut output_writer: lv2_atom::vector::VectorWriter<Float> =
                 object_writer.init(self.urids.output_signal, None,
