@@ -116,14 +116,14 @@ struct EnvolvigoUI {
     enabled_button: widget::WidgetHandle<jilar::Button>,
     use_sidechain_button: widget::WidgetHandle<jilar::Button>,
 
-    attack_boost_dial: widget::WidgetHandle<jilar::Dial>,
-    attack_smooth_dial: widget::WidgetHandle<jilar::Dial>,
+    attack_boost_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LinearScale>>,
+    attack_smooth_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LogScale>>,
 
-    sustain_boost_dial: widget::WidgetHandle<jilar::Dial>,
-    sustain_smooth_dial: widget::WidgetHandle<jilar::Dial>,
+    sustain_boost_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LinearScale>>,
+    sustain_smooth_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LogScale>>,
 
-    outgain_dial: widget::WidgetHandle<jilar::Dial>,
-    mix_dial: widget::WidgetHandle<jilar::Dial>,
+    outgain_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LinearScale>>,
+    mix_dial: widget::WidgetHandle<jilar::Dial<jilar::dial::LinearScale>>,
 
     osci: widget::WidgetHandle<jilar::Osci>,
 
@@ -152,8 +152,8 @@ impl EnvolvigoUI {
         let use_sidechain_button = ui.new_widget(jilar::Button::new_toggle_button("Sidechain"));
 
         let attack_boost_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(-30.0, 30.0, 5.0);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(-30.0, 30.0, 12);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LinearScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.0);
@@ -161,8 +161,8 @@ impl EnvolvigoUI {
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
         let attack_smooth_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.0001, 0.05, 0.01);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(0.0001, 0.05, 10);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LogScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
@@ -171,8 +171,8 @@ impl EnvolvigoUI {
         });
 
         let sustain_boost_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(-30.0, 30.0, 5.0);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(-30.0, 30.0, 12);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LinearScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.0);
@@ -180,8 +180,8 @@ impl EnvolvigoUI {
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
         let sustain_smooth_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.001, 0.2, 0.01);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(0.001, 0.2, 10);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LogScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
@@ -190,8 +190,8 @@ impl EnvolvigoUI {
         });
 
         let outgain_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(-60.0, 6.0, 6.0);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(-60.0, 6.0, 11);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LinearScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.0);
@@ -199,8 +199,8 @@ impl EnvolvigoUI {
         });
 
         let mix_dial = ui.new_widget( cascade! {
-            jilar::Dial::new(0.0, 1.0, 0.1);
-            ..set_plate_draw( &|d: &jilar::Dial, cr: &cairo::Context| {
+            jilar::Dial::new(0.0, 1.0, 10);
+            ..set_plate_draw( &|d: &jilar::Dial<jilar::dial::LinearScale>, cr: &cairo::Context| {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(1.0);
