@@ -318,6 +318,8 @@ impl EnvolvigoUI {
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
+        ui.add_spacer(sect_layout, layout::StackDirection::Back);
+
         let hl = ui.new_layouter::<layout::HorizontalLayouter>();
         ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
