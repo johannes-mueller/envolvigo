@@ -307,7 +307,7 @@ impl Plugin for Envolvigo {
                     self.attack_fast.reset(0.0);
                     self.attack_slow.reset(0.0);
                     self.attack_smooth.reset(self.result_gain.level());
-                    println!("ATK {} {}", lvl, old_lvl);
+                    //println!("ATK {} {}", lvl, old_lvl);
                     if attack_point.is_none() {
                         attack_point = Some(sample_num);
                     }
@@ -327,7 +327,7 @@ impl Plugin for Envolvigo {
 
                     let gain = pregain.powf(attack_boost);
                     if pregain < 1.0 {
-                        println!("REL {} {} {} {}", lvl, delta_atk, atk_fast, atk_slow);
+                        //println!("REL {} {} {} {}", lvl, delta_atk, atk_fast, atk_slow);
                         state = Release;
                         release_point = Some(sample_num);
                         self.release_fast.reset(atk_slow);
@@ -350,7 +350,7 @@ impl Plugin for Envolvigo {
                     );
 
                     if to_dB(&pregain) < 0.0 {
-                        println!("IDLE {} {} {} {}", lvl, delta_rel, rel_fast, rel_slow);
+                        //println!("IDLE {} {} {} {}", lvl, delta_rel, rel_fast, rel_slow);
                         idle_point = Some(sample_num);
                         state = Idle;
                     }
