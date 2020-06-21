@@ -126,6 +126,10 @@ struct EnvolvigoUI {
 
     osci: widget::WidgetHandle<jilar::Osci>,
 
+    in_meter: widget::WidgetHandle<jilar::Meter>,
+    out_meter: widget::WidgetHandle<jilar::Meter>,
+    meter_damping_coeff: f32,
+
     ports: UIPorts,
     write_handle: PluginPortWriteHandle,
 
@@ -213,6 +217,9 @@ impl EnvolvigoUI {
             ..linear_major_xticks(10);
             ..linear_major_yticks(12);
         });
+
+        let in_meter = ui.new_widget(jilar::Meter::new());
+        let out_meter = ui.new_widget(jilar::Meter::new());
 
         ui.layouter_handle(ui.root_layout()).set_padding(5.0);
         ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
@@ -334,6 +341,40 @@ impl EnvolvigoUI {
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
+        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+
+        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+
+        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(in_meter, hl, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+
+        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+        let lb = ui.new_widget(jilar::Label::new("In"));
+        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+
+        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+
+        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(out_meter, hl, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+
+        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+        let lb = ui.new_widget(jilar::Label::new("Out"));
+        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
+        ui.add_spacer(hl, layout::StackDirection::Back);
+
         ui.do_layout();
 
         let view = pugl_sys::PuglView::make_view(ui, parent_window);
@@ -358,6 +399,9 @@ impl EnvolvigoUI {
             outgain_dial,
             mix_dial,
             osci,
+            in_meter,
+            out_meter,
+            meter_damping_coeff: 1.0,
             ports,
             write_handle,
             input_signal: Arc::new(RwLock::new(Vec::new())),
@@ -514,12 +558,17 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
         let mut osci_repaint = false;
         let mut received_sample_rate = false;
         let displayed_sample_num = (state.display_time * self.sample_rate).ceil() as usize;
+        let mut new_in_peak = self.ui().widget(self.in_meter).level();
+        let mut new_out_peak = self.ui().widget(self.out_meter).level();
+        let meter_damping_coeff = self.meter_damping_coeff;
 
         if let Some((_, object_reader)) = self.ports.notify.read(self.urids.atom.object, ()) {
             for (header, atom) in object_reader {
                 if header.key == self.urids.sample_rate  {
                     if let Some(sr) =  atom.read(self.urids.atom.float, ()) {
                         self.sample_rate = sr as f64;
+                        self.meter_damping_coeff = 1.0f32 - (-6.28f32 * 50000.0f32/sr).exp();
+                        println!("coeff = {:e}", self.meter_damping_coeff);
                         received_sample_rate = true;
                     } else {
                         eprintln!("expected float for sample rate, got something different");
@@ -577,6 +626,15 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         if input_signal.len() < displayed_sample_num {
                             input_signal.extend(new_input_signal);
                         }
+                        new_in_peak = new_input_signal
+                            .iter()
+                            .fold(new_in_peak, |a, &v| {
+                                if v >= a {
+                                    v
+                                } else {
+                                    v + meter_damping_coeff * (a - v)
+                                }
+                            });
                         osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
@@ -588,6 +646,15 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         if output_signal.len() < displayed_sample_num {
                             output_signal.extend(new_output_signal);
                         }
+                        new_out_peak = new_output_signal
+                            .iter()
+                            .fold(new_out_peak, |a, &v| {
+                                if v > a {
+                                    v
+                                } else {
+                                    v + meter_damping_coeff * (a - v)
+                                }
+                            });
                         osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
@@ -595,8 +662,9 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                 } else {
                     eprintln!("unknown atom information received");
                 }
-
             }
+            self.ui().widget(self.in_meter).set_level(new_in_peak);
+            self.ui().widget(self.out_meter).set_level(new_out_peak);
         }
 
         *self.state.write().unwrap() = state;
