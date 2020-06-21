@@ -300,6 +300,8 @@ impl EnvolvigoUI {
         ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
         ui.add_spacer(hl, layout::StackDirection::Back);
 
+        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+
         // Layout "Outgain Mix dials"
         let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
         ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
