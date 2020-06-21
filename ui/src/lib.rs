@@ -782,7 +782,7 @@ impl jilar::osci::DrawingTask for OsciDrawings {
             .ceil() as usize;
 
         let left = osci_coord_system.left();
-        let top = osci_coord_system.right();
+        let top = osci_coord_system.top();
         let width = osci_coord_system.width();
         let height = osci_coord_system.height();
         let right = osci_coord_system.right();
@@ -843,20 +843,23 @@ impl jilar::osci::DrawingTask for OsciDrawings {
             }
         }
         cr.stroke();
+        cr.reset_clip();
 
         if let Some(release_point) = state.release_point {
+            let x = left + (release_point-attack_point) as f64/samples_per_pixel as f64;
             cr.set_source_rgba(1.0, 0.0, 0.0, self.disable_alpha);
-            cr.set_line_width(0.25);
-            cr.move_to((release_point-attack_point) as f64/samples_per_pixel as f64, top);
-            cr.line_to((release_point-attack_point) as f64/samples_per_pixel as f64, bottom);
+            cr.set_line_width(1.0);
+            cr.move_to(x, top);
+            cr.line_to(x, bottom);
             cr.stroke();
         }
 
         if let Some(idle_point) = state.idle_point {
+            let x = left + (idle_point-attack_point) as f64/samples_per_pixel as f64;
             cr.set_source_rgba(0.0, 1.0, 0.0, self.disable_alpha);
-            cr.set_line_width(0.25);
-            cr.move_to((idle_point-attack_point) as f64/samples_per_pixel as f64, top);
-            cr.line_to((idle_point-attack_point) as f64/samples_per_pixel as f64, bottom);
+            cr.set_line_width(0.5);
+            cr.move_to(x, top);
+            cr.line_to(x, bottom);
             cr.stroke();
         }
     }
