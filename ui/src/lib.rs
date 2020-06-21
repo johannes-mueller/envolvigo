@@ -25,35 +25,34 @@ struct Features<'a> {
     map: LV2Map<'a>
 }
 
-
 struct UIPorts {
-    enabled: ControlPort,
-    use_sidechain: ControlPort,
-    attack_boost: ControlPort,
-    attack_smooth: ControlPort,
-    sustain_boost: ControlPort,
-    sustain_smooth: ControlPort,
-    gain_attack: ControlPort,
-    gain_release: ControlPort,
-    outgain: ControlPort,
-    mix: ControlPort,
+    enabled: UIControlPort,
+    use_sidechain: UIControlPort,
+    attack_boost: UIControlPort,
+    attack_smooth: UIControlPort,
+    sustain_boost: UIControlPort,
+    sustain_smooth: UIControlPort,
+    gain_attack: UIControlPort,
+    gain_release: UIControlPort,
+    outgain: UIControlPort,
+    mix: UIControlPort,
     control: UIAtomPort,
     notify: UIAtomPort
 }
 
 impl UIPorts {
-    fn new(urid: URID<AtomEventTransfer>) -> Self {
+    fn new(urid: URID<EventTransfer>) -> Self {
         UIPorts {
-            enabled: ControlPort::new(0),
-            use_sidechain: ControlPort::new(1),
-            attack_boost: ControlPort::new(2),
-            attack_smooth: ControlPort::new(3),
-            sustain_boost: ControlPort::new(4),
-            sustain_smooth: ControlPort::new(5),
-            gain_attack: ControlPort::new(6),
-            gain_release: ControlPort::new(7),
-            outgain: ControlPort::new(8),
-            mix: ControlPort::new(9),
+            enabled: UIControlPort::new(0),
+            use_sidechain: UIControlPort::new(1),
+            attack_boost: UIControlPort::new(2),
+            attack_smooth: UIControlPort::new(3),
+            sustain_boost: UIControlPort::new(4),
+            sustain_smooth: UIControlPort::new(5),
+            gain_attack: UIControlPort::new(6),
+            gain_release: UIControlPort::new(7),
+            outgain: UIControlPort::new(8),
+            mix: UIControlPort::new(9),
             control: UIAtomPort::new(urid, 10),
             notify: UIAtomPort::new(urid, 11)
         }
@@ -61,7 +60,7 @@ impl UIPorts {
 }
 
 impl UIPortsTrait for UIPorts {
-    fn map_control_port(&mut self, port_index: u32) -> Option<&mut ControlPort> {
+    fn map_control_port(&mut self, port_index: u32) -> Option<&mut UIControlPort> {
         match port_index {
             0 => Some(&mut self.enabled),
             1 => Some(&mut self.use_sidechain),
