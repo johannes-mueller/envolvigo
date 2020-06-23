@@ -590,8 +590,6 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         if input_signal.len() != gain_signal.len() {
                             println!("warning: input != gain {} {}", input_signal.len(), gain_signal.len());
                         }
-                        println!("received attack point {} {} {} {}", ap, cut_samples, gain_signal.len(),
-                                 input_signal.iter().fold(-160.0f32, |a, v| a.max(*v)));
 
                         gain_signal.drain(..cut_samples);
                         input_signal.drain(..cut_samples);
@@ -620,7 +618,6 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         if gain_signal.len() < displayed_sample_num {
                             gain_signal.extend(new_gain_signal);
                         }
-                        //println!("{} gain samples", gain_signal.len());
                         osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
