@@ -22,7 +22,8 @@ use pugl_sys::pugl::PuglViewTrait;
 
 #[derive(FeatureCollection)]
 struct Features<'a> {
-    map: LV2Map<'a>
+    map: LV2Map<'a>,
+    options: lv2::lv2_urid::LV2Options,
 }
 
 struct UIPorts {
@@ -149,10 +150,16 @@ impl EnvolvigoUI {
     fn new(features: &mut Features<'static>,
            parent_window: *mut std::ffi::c_void,
            write_handle: PluginPortWriteHandle) -> Option<Self> {
-        let mut ui = Box::new(pugl::ui::UI::new(Box::new(RootWidget::default())));
+        let urids: urids::URIDs = features.map.populate_collection()?;
 
-        let enabled_button = ui.new_widget(jilar::Button::new_toggle_button("Enabled"));
-        let use_sidechain_button = ui.new_widget(jilar::Button::new_toggle_button("Sidechain"));
+        let scale_factor = features
+            .options
+            .retrieve_option(urids.scale_factor)
+            .and_then(|atom| atom.read(urids.atom.float, ()))
+            .unwrap_or(1.0) as f64;
+
+        let mut ui = Box::new(pugl::ui::UI::new_scaled(Box::new(RootWidget::default()), scale_factor));
+
 
         let attack_boost_dial = ui.new_widget( cascade! {
             jilar::Dial::new(-30.0, 30.0, 12);
@@ -380,13 +387,12 @@ impl EnvolvigoUI {
         let view = pugl_sys::PuglView::make_view(ui, parent_window);
 
         let ui = view.handle();
+        ui.make_resizable();
         ui.fit_window_size();
         ui.fit_window_min_size();
-        ui.make_resizable();
         ui.set_window_title("Envolvigo – a Transient Designer");
         ui.show_window();
 
-        let urids: urids::URIDs = features.map.populate_collection()?;
         let ports = UIPorts::new(urids.atom_event_transfer);
         Some(Self {
             view,
