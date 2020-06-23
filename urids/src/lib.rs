@@ -44,6 +44,7 @@ pub struct URIDs {
     pub ui_on: URID<UIOn>,
     pub ui_off: URID<UIOff>,
     pub scale_factor: URID<ScaleFactor>,
+    pub update_rate: URID<UpdateRate>,
     pub atom_event_transfer: URID<EventTransfer>,
     pub max_block_length: URID<MaxBlockLength>,
     pub plugin_state: URID<PluginState>,

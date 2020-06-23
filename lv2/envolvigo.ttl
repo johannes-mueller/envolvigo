@@ -21,6 +21,7 @@
 envolvigo:ui
     a ui:X11UI ;
     opts:supportedOption <http://lv2plug.in/ns/extensions/ui#scaleFactor> ;
+    opts:requiredOption <http://lv2plug.in/ns/extensions/ui#updateRate> ;
     lv2:optionalFeature opts:options ;
     lv2:requiredFeature ui:idleInterface; lv2:extensionData ui:idleInterface;
     lv2:requiredFeature urid:map ;

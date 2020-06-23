@@ -152,11 +152,15 @@ impl EnvolvigoUI {
            write_handle: PluginPortWriteHandle) -> Option<Self> {
         let urids: urids::URIDs = features.map.populate_collection()?;
 
-        let scale_factor = features
-            .options
+        let scale_factor = features.options
             .retrieve_option(urids.scale_factor)
             .and_then(|atom| atom.read(urids.atom.float, ()))
             .unwrap_or(1.0) as f64;
+
+        let update_rate = features.options
+            .retrieve_option(urids.update_rate)
+            .and_then(|atom| atom.read(urids.atom.float, ()))
+            .unwrap_or(-25.0) as f64;
 
         let mut ui = Box::new(pugl::ui::UI::new_scaled(Box::new(RootWidget::default()), scale_factor));
 
@@ -227,8 +231,8 @@ impl EnvolvigoUI {
             ..linear_major_yticks(12);
         });
 
-        let in_meter = ui.new_widget(jilar::Meter::new());
-        let out_meter = ui.new_widget(jilar::Meter::new());
+        let in_meter = ui.new_widget(jilar::Meter::new(1./update_rate));
+        let out_meter = ui.new_widget(jilar::Meter::new(1./update_rate));
 
         ui.layouter_handle(ui.root_layout()).set_padding(5.0);
         ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
@@ -566,8 +570,10 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
         let mut osci_repaint = false;
         let mut received_sample_rate = false;
         let displayed_sample_num = (state.display_time * self.sample_rate).ceil() as usize;
-        let mut new_in_peak = self.ui().widget(self.in_meter).level();
-        let mut new_out_peak = self.ui().widget(self.out_meter).level();
+        let in_peak = self.ui().widget(self.in_meter).level();
+        let mut new_in_peak = -160.0;
+        let out_peak = self.ui().widget(self.out_meter).level();
+        let mut new_out_peak = -160.0;
         let meter_damping_coeff = self.meter_damping_coeff;
 
         if let Some((_, object_reader)) = self.ports.notify.read(self.urids.atom.object, ()) {
@@ -633,7 +639,7 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         }
                         new_in_peak = new_input_signal
                             .iter()
-                            .fold(new_in_peak, |a, &v| {
+                            .fold(in_peak, |a, &v| {
                                 if v >= a {
                                     v
                                 } else {
@@ -653,7 +659,7 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                         }
                         new_out_peak = new_output_signal
                             .iter()
-                            .fold(new_out_peak, |a, &v| {
+                            .fold(out_peak, |a, &v| {
                                 if v > a {
                                     v
                                 } else {
@@ -668,9 +674,10 @@ impl lv2_ui::PluginUI for EnvolvigoUI {
                     eprintln!("unknown atom information received");
                 }
             }
-            self.ui().widget(self.in_meter).set_level(new_in_peak);
-            self.ui().widget(self.out_meter).set_level(new_out_peak);
         }
+
+        self.ui().widget(self.in_meter).set_level(new_in_peak);
+        self.ui().widget(self.out_meter).set_level(new_out_peak);
 
         *self.state.write().unwrap() = state;
 
