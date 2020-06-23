@@ -160,6 +160,8 @@ impl EnvolvigoUI {
 
         let mut ui = Box::new(pugl::ui::UI::new_scaled(Box::new(RootWidget::default()), scale_factor));
 
+        let enabled_button = ui.new_widget(jilar::Button::new_toggle_button("Enabled", 2./3.));
+        let use_sidechain_button = ui.new_widget(jilar::Button::new_toggle_button("Sidechain", 2./3.));
 
         let attack_boost_dial = ui.new_widget( cascade! {
             jilar::Dial::new(-30.0, 30.0, 12);
@@ -167,7 +169,7 @@ impl EnvolvigoUI {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.0);
-            ..set_hue(Some(0.1));
+            ..set_hue(Some(0.0));
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
         let attack_smooth_dial = ui.new_widget( cascade! {
@@ -176,7 +178,7 @@ impl EnvolvigoUI {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
-            ..set_hue(Some(0.1));
+            ..set_hue(Some(0.0));
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
         });
 
@@ -186,7 +188,7 @@ impl EnvolvigoUI {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.0);
-            ..set_hue(Some(0.7));
+            ..set_hue(Some(1./3.));
             ..set_formater(&|v| format!("{:.1} dB", v));
         });
         let sustain_smooth_dial = ui.new_widget( cascade! {
@@ -195,7 +197,7 @@ impl EnvolvigoUI {
                 jilar::dial::draw_angle_tics(d, cr, 11)
             });
             ..set_default_value(0.035);
-            ..set_hue(Some(0.7));
+            ..set_hue(Some(1./3.));
             ..set_formater(&|v| format!("{:.1} ms", v*1000.));
         });
 
