@@ -1,37 +1,42 @@
-@prefix atom:    <http://lv2plug.in/ns/ext/atom#> .
+@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix opts:  <http://lv2plug.in/ns/ext/options#> .
+@prefix pprop: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix pprop: <http://lv2plug.in/ns/ext/port-props#> .
-@prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
+@prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 
-@prefix envolvigo: <https://johannes-mueller.org/lv2/envolvigo#> .
+<http://johannes-mueller.org/>
+    a foaf:Person ;
+    foaf:name "Johannes Mueller" ;
+    foaf:mbox <mailto:github@johannes-mueller.org> ;
+    foaf:homepage <http://johannes-mueller.org/> .
+
+@prefix envolvigo: <http://johannes-mueller.org/lv2/envolvigo#> .
 
 envolvigo:ui
     a ui:X11UI ;
+    opts:supportedOption <http://lv2plug.in/ns/extensions/ui#scaleFactor> ;
+    lv2:optionalFeature opts:options ;
     lv2:requiredFeature ui:idleInterface; lv2:extensionData ui:idleInterface;
     lv2:requiredFeature urid:map ;
-    ui:portNotification [
-        ui:plugin envolvigo:lv2 ;
-        lv2:symbol "notify" ;
-        ui:notifyType: atom:Object
-    ] .
-
-
+    .
 
 envolvigo:lv2
-    a lv2:Plugin ,
-        lv2:AmplifierPlugin ;
-
-    lv2:project <https://johannes-mueller.org/lv2/envolvigo> ;
-    doap:name "Envolvigo – Transient designer" ;
+    a lv2:Plugin, doap:Project, lv2:EnvelopePlugin ;
+    doap:maintainer <http://johannes-mueller.org/> ;
     doap:license <http://opensource.org/licenses/GPL-2.0> ;
-
+    doap:name "Envolvigo – Transient designer";
+    lv2:microVersion 0 ; lv2:minorVersion 0 ;
+    lv2:optionalFeature lv2:hardRTCapable ;
+    lv2:requiredFeature urid:map ;
+    lv2:requiredFeature opts:options ;
+    opts:requiredOption <http://lv2plug.in/ns/ext/buf-size#maxBlockLength> ;
     ui:ui envolvigo:ui ;
-
     lv2:port [
         a lv2:InputPort , lv2:ControlPort ;
         lv2:index 0 ;
@@ -98,7 +103,7 @@ envolvigo:lv2
 	lv2:name "Gain attack";
 	lv2:default 0.0001 ;
 	lv2:minimum 0.0001 ;
-	lv2:maximum 0.0001 ;
+	lv2:maximum 0.00011 ;
         lv2:portProperty pprop:notOnGUI ;
 	lv2:portProperty pprop:logarithmic ;
 	units:unit units:s ;
@@ -109,7 +114,7 @@ envolvigo:lv2
 	lv2:name "Gain release";
 	lv2:default 0.001 ;
 	lv2:minimum 0.001 ;
-	lv2:maximum 0.001 ;
+	lv2:maximum 0.0011 ;
         lv2:portProperty pprop:notOnGUI ;
 	lv2:portProperty pprop:logarithmic ;
 	units:unit units:s ;

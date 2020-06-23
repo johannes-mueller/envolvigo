@@ -155,7 +155,7 @@ enum State {
 
 use State::*;
 
-#[uri("https://johannes-mueller.org/lv2/envolvigo#lv2")]
+#[uri("http://johannes-mueller.org/lv2/envolvigo#lv2")]
 struct Envolvigo {
     urids: urids::URIDs,
     ui_active: bool,

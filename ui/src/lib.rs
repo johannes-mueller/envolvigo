@@ -109,7 +109,7 @@ impl Default for State {
 
 
 
-#[uri("https://johannes-mueller.org/lv2/envolvigo#ui")]
+#[uri("http://johannes-mueller.org/lv2/envolvigo#ui")]
 struct EnvolvigoUI {
     view: Box<pugl_sys::PuglView<pugl::ui::UI<RootWidget>>>,
 
@@ -704,7 +704,6 @@ unsafe impl PluginUIInstanceDescriptor for EnvolvigoUI {
         cleanup: Some(PluginUIInstance::<Self>::cleanup),
         port_event: Some(PluginUIInstance::<Self>::port_event),
         extension_data: Some(PluginUIInstance::<Self>::extension_data)
-
     };
 }
 
