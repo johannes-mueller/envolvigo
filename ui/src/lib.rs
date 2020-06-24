@@ -26,6 +26,7 @@ struct Features<'a> {
     options: lv2::lv2_urid::LV2Options,
 }
 
+#[derive(UIPortCollection)]
 struct UIPorts {
     enabled: UIControlPort,
     use_sidechain: UIControlPort,
@@ -39,51 +40,6 @@ struct UIPorts {
     mix: UIControlPort,
     control: UIAtomPort,
     notify: UIAtomPort
-}
-
-impl UIPorts {
-    fn new(urid: URID<EventTransfer>) -> Self {
-        UIPorts {
-            enabled: UIControlPort::new(0),
-            use_sidechain: UIControlPort::new(1),
-            attack_boost: UIControlPort::new(2),
-            attack_smooth: UIControlPort::new(3),
-            sustain_boost: UIControlPort::new(4),
-            sustain_smooth: UIControlPort::new(5),
-            gain_attack: UIControlPort::new(6),
-            gain_release: UIControlPort::new(7),
-            outgain: UIControlPort::new(8),
-            mix: UIControlPort::new(9),
-            control: UIAtomPort::new(urid, 10),
-            notify: UIAtomPort::new(urid, 11)
-        }
-    }
-}
-
-impl UIPortsTrait for UIPorts {
-    fn map_control_port(&mut self, port_index: u32) -> Option<&mut UIControlPort> {
-        match port_index {
-            0 => Some(&mut self.enabled),
-            1 => Some(&mut self.use_sidechain),
-            2 => Some(&mut self.attack_boost),
-            3 => Some(&mut self.attack_smooth),
-            4 => Some(&mut self.sustain_boost),
-            5 => Some(&mut self.sustain_smooth),
-            6 => Some(&mut self.gain_attack),
-            7 => Some(&mut self.gain_release),
-            8 => Some(&mut self.outgain),
-            9 => Some(&mut self.mix),
-            _ => None
-        }
-    }
-
-    fn map_atom_port(&mut self, port_index: u32) -> Option<&mut UIAtomPort> {
-        match port_index {
-            10 => Some(&mut self.control),
-            11 => Some(&mut self.notify),
-            _ => None
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -704,23 +660,7 @@ impl PluginUI for EnvolvigoUI {
 }
 
 
-unsafe impl PluginUIInstanceDescriptor for EnvolvigoUI {
-    const DESCRIPTOR: lv2_sys::LV2UI_Descriptor = lv2_sys::LV2UI_Descriptor {
-        URI: Self::URI.as_ptr() as *const u8 as *const ::std::os::raw::c_char,
-        instantiate: Some(PluginUIInstance::<Self>::instantiate),
-        cleanup: Some(PluginUIInstance::<Self>::cleanup),
-        port_event: Some(PluginUIInstance::<Self>::port_event),
-        extension_data: Some(PluginUIInstance::<Self>::extension_data)
-    };
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn lv2ui_descriptor(index: u32) -> *const lv2_sys::LV2UI_Descriptor {
-    match index {
-        0 => &<EnvolvigoUI as PluginUIInstanceDescriptor>::DESCRIPTOR,
-        _ => std::ptr::null()
-    }
-}
+lv2ui_descriptors!(EnvolvigoUI);
 
 
 #[derive(Default)]
