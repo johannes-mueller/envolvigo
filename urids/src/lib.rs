@@ -1,5 +1,5 @@
 use lv2::prelude::*;
-use lv2_ui::*;
+use lv2_ui::uris::*;
 
 
 #[uri("http://johannes-mueller.org/lv2/envolvigo#PluginConfig")]

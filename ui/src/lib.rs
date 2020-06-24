@@ -6,7 +6,7 @@ extern crate cascade;
 #[macro_use] extern crate pugl_ui;
 
 use lv2::prelude::*;
-use lv2_ui::*;
+use lv2_ui::prelude::*;
 use lv2;
 
 use jilar;
@@ -453,7 +453,7 @@ impl EnvolvigoUI {
     }
 }
 
-impl lv2_ui::PluginUI for EnvolvigoUI {
+impl PluginUI for EnvolvigoUI {
 
     type InitFeatures = Features<'static>;
     type UIPorts = UIPorts;
