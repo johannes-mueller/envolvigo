@@ -273,7 +273,7 @@ impl Plugin for Envolvigo {
 
         self.check_notification_events(ports);
 
-	self.gain_buffer.clear();
+        self.gain_buffer.clear();
 
         let mut attack_point: Option<usize> = None;
         let mut release_point: Option<usize> = None;

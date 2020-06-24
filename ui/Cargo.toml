@@ -17,12 +17,9 @@ cairo-rs = "0.8.1"
 pango = "0.8.0"
 pangocairo = "0.9.0"
 
-#pugl-ui = { git = "https://github.com/johannes-mueller/pugl-ui" }
-pugl-ui = { path = "../../pugl-ui" }
-#pugl-sys = { git = "https://github.com/johannes-mueller/pugl-sys" }
-pugl-sys = { path = "../../pugl-sys" }
-#lv2-ui = { git = "https://github.com/johannes-mueller/lv2-ui" }
-lv2-ui = { path = "../../lv2-ui" }
+pugl-ui = { git = "https://github.com/johannes-mueller/pugl-ui" }
+pugl-sys = { git = "https://github.com/johannes-mueller/pugl-sys" }
+lv2-ui = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+jilar = { git = "https://github.com/johannes-mueller/jilar.git" }
 
-jilar = { path = "../../jilar" }
 urids = { path = "../urids" }

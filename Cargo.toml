@@ -2,3 +2,11 @@
 [workspace]
 members = ["plugin", "ui"]
 default-members = ["plugin", "ui"]
+
+[patch.crates-io]
+lv2 = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+lv2-atom = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+lv2-core = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+lv2-sys = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+lv2-urid = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+
