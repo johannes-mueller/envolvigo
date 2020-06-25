@@ -563,14 +563,14 @@ impl PluginUI for EnvolvigoUI {
                     };
                 } else if header.key == self.urids.release_point {
                     if let Some(p) = atom.read(self.urids.atom.int, ()) {
-                        let mut input_signal = self.input_signal.read().unwrap();
+                        let input_signal = self.input_signal.read().unwrap();
                         state.release_point = Some(p as usize + input_signal.len());
                     } else {
                         eprintln!("expected int for release point, got something different");
                     };
                 } else if header.key == self.urids.idle_point {
                     if let Some(p) = atom.read(self.urids.atom.int, ()) {
-                        let mut input_signal = self.input_signal.read().unwrap();
+                        let input_signal = self.input_signal.read().unwrap();
                         state.idle_point = Some(p as usize + input_signal.len());
                     } else {
                         eprintln!("expected int for idle point, got something different");
@@ -734,8 +734,6 @@ impl jilar::osci::DrawingTask for OsciDrawings {
 
         let left = osci_coord_system.left();
         let top = osci_coord_system.top();
-        let width = osci_coord_system.width();
-        let height = osci_coord_system.height();
         let right = osci_coord_system.right();
         let bottom = osci_coord_system.bottom();
 

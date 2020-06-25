@@ -1,6 +1,5 @@
 use std::f32::consts::PI;
 
-#[macro_use] extern crate itertools;
 use itertools::izip;
 use lv2::prelude::*;
 use lv2::lv2_urid as lv2_urid;
@@ -13,8 +12,8 @@ struct Ports {
     attack_smooth: InputPort<Control>,
     sustain_boost: InputPort<Control>,
     sustain_smooth: InputPort<Control>,
-    gain_attack: InputPort<Control>,
-    gain_release: InputPort<Control>,
+    _gain_attack: InputPort<Control>,
+    _gain_release: InputPort<Control>,
     outgain: InputPort<Control>,
     mix: InputPort<Control>,
     control: InputPort<AtomPort>,
@@ -34,7 +33,6 @@ struct Dezipper {
     target: f32,
     current_value: f32,
     coeff: f32,
-    sample_rate: f32
 }
 
 impl Dezipper {
@@ -42,7 +40,6 @@ impl Dezipper {
         Dezipper {
             target: start_value,
             current_value: start_value,
-            sample_rate: sample_rate,
             coeff: 1.0 - (-2.0 * PI * 25. / sample_rate).exp()
         }
     }
@@ -54,10 +51,6 @@ impl Dezipper {
     fn process(&mut self) -> f32 {
         self.current_value += self.coeff * (self.target - self.current_value);
         self.current_value
-    }
-
-    fn set_cutoff_freq(&mut self, freq: f32) {
-        self.coeff - (2.0 * PI * freq / self.sample_rate).exp();
     }
 }
 
@@ -162,7 +155,6 @@ struct Envolvigo {
     ui_notified: bool,
 
     sample_rate: f32,
-    max_block_length: usize,
 
     beat_detector: BeatDetector,
 
@@ -210,7 +202,6 @@ impl Plugin for Envolvigo {
             urids,
 
             sample_rate,
-            max_block_length,
 
             beat_detector: BeatDetector::new(sample_rate, 0.2),
 
@@ -444,15 +435,11 @@ impl Envolvigo {
             };
 
         for (_, message) in control_sequence {
-            if let Some((header, mut object_reader)) = message.read(self.urids.atom.object, ()) {
-                println!("received message");
-
+            if let Some((header,  _)) = message.read(self.urids.atom.object, ()) {
                 if header.otype == self.urids.ui_on {
-                    println!("UI went on");
                     self.ui_active = true;
                     self.ui_notified = false;
                 } else if header.otype == self.urids.ui_off {
-                    println!("UI went off");
                     self.ui_active = false;
                 }
             }
