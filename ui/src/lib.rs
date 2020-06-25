@@ -341,7 +341,7 @@ impl EnvolvigoUI {
 
         ui.do_layout();
 
-        let view = pugl_sys::PuglView::make_view(ui, parent_window);
+        let mut view = pugl_sys::PuglView::make_view(ui, parent_window);
 
         let ui = view.handle();
         ui.make_resizable();
