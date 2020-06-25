@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use itertools::izip;
 use lv2::prelude::*;
 use lv2::lv2_urid as lv2_urid;
-use urids;
+
 #[derive(PortCollection)]
 struct Ports {
     enabled: InputPort<Control>,
@@ -243,15 +243,16 @@ impl Plugin for Envolvigo {
         let sustain_smooth = ports.sustain_smooth.max(0.001).min(0.2);
         self.sustain_smooth.set_params(sustain_smooth, sustain_smooth);
 
-        let (mut state, mix) = match *ports.enabled > 0.5{
-            true => (
+        let (mut state, mix) = if *ports.enabled > 0.5 {
+	    (
                 match self.state {
                     Disabled => Idle,
                     state => state
                 },
                 ports.mix.max(0.0).min(1.0)
-            ),
-            false => (
+            )
+	} else {
+	    (
                 Disabled,
                 0.0
             )

@@ -7,11 +7,6 @@ extern crate cascade;
 
 use lv2::prelude::*;
 use lv2_ui::prelude::*;
-use lv2;
-
-use jilar;
-
-use urids;
 
 use pugl_ui as pugl;
 use pugl_ui::layout;
@@ -382,8 +377,12 @@ impl EnvolvigoUI {
         })
     }
 
-    fn ui(&self) -> &mut pugl::ui::UI<RootWidget> {
+    fn ui(&mut self) -> &mut pugl::ui::UI<RootWidget> {
         self.view.handle()
+    }
+
+    fn widget<W: widget::Widget>(&mut self, widget: widget::WidgetHandle<W>) -> &mut W {
+        self.ui().widget(widget)
     }
 
     fn send_ui_enable(&mut self) {
@@ -447,38 +446,38 @@ impl PluginUI for EnvolvigoUI {
                 ui.focus_next_widget();
         }
 
-        if let Some(ts) = self.ui().widget(self.enabled_button).changed_toggle_state() {
+        if let Some(ts) = self.widget(self.enabled_button).changed_toggle_state() {
             self.ports.enabled.set_value(if ts { 1.0 } else { 0.0 });
             self.write_handle.write_port(&self.ports.enabled);
         }
-        if let Some(ts) = self.ui().widget(self.use_sidechain_button).changed_toggle_state() {
+        if let Some(ts) = self.widget(self.use_sidechain_button).changed_toggle_state() {
             self.ports.use_sidechain.set_value(if ts { 1.0 } else { 0.0 });
             self.write_handle.write_port(&self.ports.use_sidechain);
         }
 
-        if let Some(v) = self.ui().widget(self.attack_boost_dial).changed_value() {
+        if let Some(v) = self.widget(self.attack_boost_dial).changed_value() {
             self.ports.attack_boost.set_value(v as f32);
             self.write_handle.write_port(&self.ports.attack_boost);
         }
-        if let Some(v) = self.ui().widget(self.attack_smooth_dial).changed_value() {
+        if let Some(v) = self.widget(self.attack_smooth_dial).changed_value() {
             self.ports.attack_smooth.set_value(v as f32);
             self.write_handle.write_port(&self.ports.attack_smooth);
         }
 
-        if let Some(v) = self.ui().widget(self.sustain_boost_dial).changed_value() {
+        if let Some(v) = self.widget(self.sustain_boost_dial).changed_value() {
             self.ports.sustain_boost.set_value(v as f32);
             self.write_handle.write_port(&self.ports.sustain_boost);
         }
-        if let Some(v) = self.ui().widget(self.sustain_smooth_dial).changed_value() {
+        if let Some(v) = self.widget(self.sustain_smooth_dial).changed_value() {
             self.ports.sustain_smooth.set_value(v as f32);
             self.write_handle.write_port(&self.ports.sustain_smooth);
         }
 
-        if let Some(v) = self.ui().widget(self.outgain_dial).changed_value() {
+        if let Some(v) = self.widget(self.outgain_dial).changed_value() {
             self.ports.outgain.set_value(v as f32);
             self.write_handle.write_port(&self.ports.outgain);
         }
-        if let Some(v) = self.ui().widget(self.mix_dial).changed_value() {
+        if let Some(v) = self.widget(self.mix_dial).changed_value() {
             self.ports.mix.set_value(v as f32);
             self.write_handle.write_port(&self.ports.mix);
         }
@@ -496,39 +495,39 @@ impl PluginUI for EnvolvigoUI {
         if let Some(v) = self.ports.enabled.changed_value() {
             let enabled = v > 0.5;
             state.enabled = enabled;
-            self.ui().widget(self.enabled_button).set_toggle_state(enabled);
+            self.widget(self.enabled_button).set_toggle_state(enabled);
         }
         if let Some(v) = self.ports.use_sidechain.changed_value() {
-            self.ui().widget(self.use_sidechain_button).set_toggle_state(v > 0.5);
+            self.widget(self.use_sidechain_button).set_toggle_state(v > 0.5);
         }
 
         if let Some(v) = self.ports.attack_boost.changed_value() {
-            self.ui().widget(self.attack_boost_dial).set_value(v as f64);
+            self.widget(self.attack_boost_dial).set_value(v as f64);
         }
         if let Some(v) = self.ports.attack_smooth.changed_value() {
-            self.ui().widget(self.attack_smooth_dial).set_value(v as f64);
+            self.widget(self.attack_smooth_dial).set_value(v as f64);
         }
 
         if let Some(v) = self.ports.sustain_boost.changed_value() {
-            self.ui().widget(self.sustain_boost_dial).set_value(v as f64);
+            self.widget(self.sustain_boost_dial).set_value(v as f64);
         }
         if let Some(v) = self.ports.sustain_smooth.changed_value() {
-            self.ui().widget(self.sustain_smooth_dial).set_value(v as f64);
+            self.widget(self.sustain_smooth_dial).set_value(v as f64);
         }
 
         if let Some(v) = self.ports.outgain.changed_value() {
-            self.ui().widget(self.outgain_dial).set_value(v as f64);
+            self.widget(self.outgain_dial).set_value(v as f64);
         }
         if let Some(v) = self.ports.mix.changed_value() {
-            self.ui().widget(self.mix_dial).set_value(v as f64);
+            self.widget(self.mix_dial).set_value(v as f64);
         }
 
         let mut osci_repaint = false;
         let mut received_sample_rate = false;
         let displayed_sample_num = (state.display_time * self.sample_rate).ceil() as usize;
-        let in_peak = self.ui().widget(self.in_meter).level();
+        let in_peak = self.widget(self.in_meter).level();
         let mut new_in_peak = -160.0;
-        let out_peak = self.ui().widget(self.out_meter).level();
+        let out_peak = self.widget(self.out_meter).level();
         let mut new_out_peak = -160.0;
         let meter_damping_coeff = self.meter_damping_coeff;
 
@@ -632,20 +631,24 @@ impl PluginUI for EnvolvigoUI {
             }
         }
 
-        self.ui().widget(self.in_meter).set_level(new_in_peak);
-        self.ui().widget(self.out_meter).set_level(new_out_peak);
+        self.widget(self.in_meter).set_level(new_in_peak);
+        self.widget(self.out_meter).set_level(new_out_peak);
 
         *self.state.write().unwrap() = state;
 
         if received_sample_rate && !self.drawing_task_submitted {
-            self.ui().widget(self.osci).submit_draw_task(
+            let input_signal = self.input_signal.clone();
+            let output_signal = self.output_signal.clone();
+            let gain_signal = self.gain_signal.clone();
+            let sample_rate = self.sample_rate;
+            let state = self.state.clone();
+            self.widget(self.osci).submit_draw_task(
                 Box::new(OsciDrawings {
-                    input_signal: self.input_signal.clone(),
-                    output_signal: self.output_signal.clone(),
-                    gain_signal: self.gain_signal.clone(),
-                    sample_rate: self.sample_rate,
-                    state: self.state.clone(),
-
+                    input_signal,
+                    output_signal,
+                    gain_signal,
+                    sample_rate,
+                    state,
                     disable_alpha: 1.0,
                 })
             );
@@ -654,7 +657,7 @@ impl PluginUI for EnvolvigoUI {
         }
 
         if osci_repaint {
-            self.ui().widget(self.osci).ask_for_repaint();
+            self.widget(self.osci).ask_for_repaint();
         }
     }
 }
