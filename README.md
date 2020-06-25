@@ -39,3 +39,8 @@ This works at least on Linux. About other systems I don't know.
 Alternatively you can symlink `lv2-debug` or to
 `$HOME/.lv2/envolvigo.lv2`. Then changes you make to `envolvigo` are available
 right after `cargo build`.
+
+
+## Screenshot
+
+![screenshot](https://raw.github.com/johannes-mueller/envolvigo/master/img/envolvigo-screenshot.png "Envolvigo GUI")
