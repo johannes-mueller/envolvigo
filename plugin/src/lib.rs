@@ -2,7 +2,6 @@ use std::f32::consts::PI;
 
 use itertools::izip;
 use lv2::prelude::*;
-use lv2::lv2_urid as lv2_urid;
 
 #[derive(PortCollection)]
 struct Ports {
@@ -26,7 +25,7 @@ struct Ports {
 #[derive(FeatureCollection)]
 struct Features<'a> {
     map: LV2Map<'a>,
-    options: lv2_urid::LV2Options
+    options: LV2Options
 }
 
 struct Dezipper {
@@ -192,7 +191,7 @@ impl Plugin for Envolvigo {
         let urids: urids::URIDs = features.map.populate_collection()?;
         let max_block_length = features
             .options
-            .retrieve_option(urids.max_block_length)
+            .retrieve_option(urids.buf_size.max_block_length)
             .and_then(|atom| atom.read(urids.atom.int, ()))
             .unwrap_or(8192) as usize;
 
@@ -380,7 +379,7 @@ impl Plugin for Envolvigo {
                     }
                 ).unwrap();
 
-                object_writer.init(self.urids.sample_rate, None,
+                object_writer.init(self.urids.parameters.sample_rate, None,
                                    self.urids.atom.float,
                                    self.sample_rate as f32);
             }

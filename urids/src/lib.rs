@@ -1,6 +1,4 @@
 use lv2::prelude::*;
-use lv2_ui::uris::*;
-
 
 #[uri("http://johannes-mueller.org/lv2/envolvigo#PluginConfig")]
 pub struct PluginConfig;
@@ -39,14 +37,12 @@ pub struct OutputSignal;
 pub struct URIDs {
     pub atom: AtomURIDCollection,
     pub unit: UnitURIDCollection,
+    pub buf_size: BufSizeURIDCollection,
+    pub parameters: ParametersURIDCollection,
+    pub ui: UIURIDCollection,
     pub plugin_config: URID<PluginConfig>,
-    pub sample_rate: URID<SampleRate>,
     pub ui_on: URID<UIOn>,
     pub ui_off: URID<UIOff>,
-    pub scale_factor: URID<ScaleFactor>,
-    pub update_rate: URID<UpdateRate>,
-    pub atom_event_transfer: URID<EventTransfer>,
-    pub max_block_length: URID<MaxBlockLength>,
     pub plugin_state: URID<PluginState>,
     pub attack_point: URID<AttackPoint>,
     pub release_point: URID<ReleasePoint>,

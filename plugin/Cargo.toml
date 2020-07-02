@@ -8,9 +8,11 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-lv2 = "0.5.1"
 lv2-atom = "1.1.0"
 
 urids = { path = "../urids" }
-
 itertools = "0.9.0"
+
+[dependencies.lv2]
+version = "0.5.1"
+features = ["lv2-options"]

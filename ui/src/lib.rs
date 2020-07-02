@@ -6,10 +6,9 @@ extern crate cascade;
 #[macro_use] extern crate pugl_ui;
 
 use lv2::prelude::*;
-use lv2_ui::prelude::*;
 
 use pugl_ui as pugl;
-use pugl_ui::layout;
+use pugl_ui::layout::stacklayout;
 use pugl_ui::widget;
 use pugl_ui::widget::Widget;
 use pugl_sys as pugl_sys;
@@ -18,7 +17,7 @@ use pugl_sys::pugl::PuglViewTrait;
 #[derive(FeatureCollection)]
 struct Features<'a> {
     map: LV2Map<'a>,
-    options: lv2::lv2_urid::LV2Options,
+    options: LV2Options,
 }
 
 #[derive(UIPortCollection)]
@@ -104,16 +103,21 @@ impl EnvolvigoUI {
         let urids: urids::URIDs = features.map.populate_collection()?;
 
         let scale_factor = features.options
-            .retrieve_option(urids.scale_factor)
+            .retrieve_option(urids.ui.scale_factor)
             .and_then(|atom| atom.read(urids.atom.float, ()))
             .unwrap_or(1.0) as f64;
 
         let update_rate = features.options
-            .retrieve_option(urids.update_rate)
+            .retrieve_option(urids.ui.update_rate)
             .and_then(|atom| atom.read(urids.atom.float, ()))
             .unwrap_or(-25.0) as f64;
 
-        let mut ui = Box::new(pugl::ui::UI::new_scaled(Box::new(RootWidget::default()), scale_factor));
+        let rw = Box::new(RootWidget::default());
+        let mut view = pugl_sys::PuglView::new(
+            parent_window,
+            |pv| pugl::ui::UI::new_scaled(pv, rw, scale_factor)
+        );
+        let ui = view.handle();
 
         let enabled_button = ui.new_widget(jilar::Button::new_toggle_button("Enabled", 2./3.));
         let use_sidechain_button = ui.new_widget(jilar::Button::new_toggle_button("Sidechain", 2./3.));
@@ -185,172 +189,169 @@ impl EnvolvigoUI {
         let in_meter = ui.new_widget(jilar::Meter::new(1./update_rate));
         let out_meter = ui.new_widget(jilar::Meter::new(1./update_rate));
 
-        ui.layouter_handle(ui.root_layout()).set_padding(5.0);
-        ui.pack_to_layout(osci, ui.root_layout(), layout::StackDirection::Back);
+        ui.layouter(ui.root_layout()).set_padding(5.0);
+        ui.pack_to_layout(osci, ui.root_layout(), stacklayout::StackDirection::Back);
 
-        let controls_layout = ui.new_layouter::<layout::HorizontalLayouter>();
+        let controls_layout = ui.new_layouter::<stacklayout::HorizontalLayouter>();
         ui.widget(controls_layout.widget()).lock_height();
-        ui.pack_to_layout(controls_layout.widget(), ui.root_layout(), layout::StackDirection::Back);
+        ui.pack_to_layout(controls_layout.widget(), ui.root_layout(), stacklayout::StackDirection::Back);
 
         // Layout "Enabled" and "Sidechain"
-        let vl = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(vl.widget(), controls_layout, layout::StackDirection::Back);
+        let vl = ui.new_layouter::<stacklayout::VerticalLayouter>();
+        ui.pack_to_layout(vl.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(vl, layout::StackDirection::Back);
-        ui.pack_to_layout(enabled_button, vl, layout::StackDirection::Back);
-        ui.pack_to_layout(use_sidechain_button, vl, layout::StackDirection::Back);
-        ui.add_spacer(vl, layout::StackDirection::Back);
+        ui.add_spacer(vl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(enabled_button, vl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(use_sidechain_button, vl, stacklayout::StackDirection::Back);
+        ui.add_spacer(vl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+        ui.add_spacer(controls_layout, stacklayout::StackDirection::Back);
 
         // Layout "Attack dials"
-        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        let sect_layout = ui.new_layouter::<stacklayout::VerticalLayouter>();
         ui.widget(sect_layout.widget()).lock_width();
-        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(attack_boost_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(attack_boost_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Attack boost"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(sect_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(attack_smooth_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(attack_smooth_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Smooth"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+        ui.add_spacer(controls_layout, stacklayout::StackDirection::Back);
 
         // Layout "Sustain dials"
-        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
+        let sect_layout = ui.new_layouter::<stacklayout::VerticalLayouter>();
         ui.widget(sect_layout.widget()).lock_width();
-        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(sustain_boost_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(sustain_boost_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Sustain boost"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(sect_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(sustain_smooth_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(sustain_smooth_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Time"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+        ui.add_spacer(controls_layout, stacklayout::StackDirection::Back);
 
         // Layout "Outgain Mix dials"
-        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+        let sect_layout = ui.new_layouter::<stacklayout::VerticalLayouter>();
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(outgain_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(outgain_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Output level"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(sect_layout, layout::StackDirection::Back);
+        ui.add_spacer(sect_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(mix_dial, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(mix_dial, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Dry/Wet"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        ui.add_spacer(controls_layout, layout::StackDirection::Back);
+        ui.add_spacer(controls_layout, stacklayout::StackDirection::Back);
 
-        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+        let sect_layout = ui.new_layouter::<stacklayout::VerticalLayouter>();
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(in_meter, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(in_meter, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("In"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let sect_layout = ui.new_layouter::<layout::VerticalLayouter>();
-        ui.pack_to_layout(sect_layout.widget(), controls_layout, layout::StackDirection::Back);
+        let sect_layout = ui.new_layouter::<stacklayout::VerticalLayouter>();
+        ui.pack_to_layout(sect_layout.widget(), controls_layout, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
-        ui.pack_to_layout(out_meter, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
+        ui.pack_to_layout(out_meter, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
-        let hl = ui.new_layouter::<layout::HorizontalLayouter>();
-        ui.pack_to_layout(hl.widget(), sect_layout, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
+        ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
         let lb = ui.new_widget(jilar::Label::new("Out"));
-        ui.pack_to_layout(lb, hl, layout::StackDirection::Back);
-        ui.add_spacer(hl, layout::StackDirection::Back);
+        ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
+        ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
         ui.do_layout();
 
-        let mut view = pugl_sys::PuglView::make_view(ui, parent_window);
-
-        let ui = view.handle();
         ui.make_resizable();
         ui.fit_window_size();
         ui.fit_window_min_size();
         ui.set_window_title("Envolvigo – a Transient Designer");
         ui.show_window();
 
-        let ports = UIPorts::new(urids.atom_event_transfer);
+        let ports = UIPorts::new(urids.atom.event_transfer);
         Some(Self {
             view,
             enabled_button,
@@ -533,7 +534,7 @@ impl PluginUI for EnvolvigoUI {
 
         if let Some((_, object_reader)) = self.ports.notify.read(self.urids.atom.object, ()) {
             for (header, atom) in object_reader {
-                if header.key == self.urids.sample_rate  {
+                if header.key == self.urids.parameters.sample_rate  {
                     if let Some(sr) =  atom.read(self.urids.atom.float, ()) {
                         self.sample_rate = sr as f64;
                         self.meter_damping_coeff = 1.0f32 - (-6.28f32 * 50000.0f32/sr).exp();

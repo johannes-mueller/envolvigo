@@ -4,6 +4,6 @@ version = "0.0.1"
 authors = ["Johannes Mueller <github@johannes-mueller.org>"]
 edition = "2018"
 
-[dependencies]
-lv2 = "0.5.1"
-lv2-ui = { git = "https://github.com/johannes-mueller/rust-lv2.git", branch="johmue-merges" }
+[dependencies.lv2]
+version = "0.5.1"
+features = ["lv2-buf-size", "lv2-options", "lv2-parameters", "lv2-ui"]
