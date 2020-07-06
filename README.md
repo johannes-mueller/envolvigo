@@ -31,7 +31,11 @@ install_lv2.sh
 from within the directory from a terminal. You should see a bunch of messages
 in your terminal. Finally it should say `envolvigo.lv2 successfully installed`.
 
-Then you should find `Envolvigo` in plugins hosts like Ardour and Carla.
+Then you should find `Envolvigo` in plugins hosts like Ardour and Carla. There
+is a mono and a stereo version available. The uris are
+
+* `http://johannes-mueller.org/lv2/envolvigo\#mono`
+* `http://johannes-mueller.org/lv2/envolvigo\#stereo`
 
 This works at least on Linux. About other systems I don't know.
 
