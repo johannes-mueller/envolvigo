@@ -48,3 +48,28 @@ right after `cargo build`.
 ## Screenshot
 
 ![screenshot](https://raw.github.com/johannes-mueller/envolvigo/master/img/envolvigo-screenshot.png "Envolvigo GUI")
+
+
+## Usage
+
+*Envolvigo* tries to automatically detect the transition from the attack regime
+to the sustain regime, i.e. the attack part, and the transition from sustain to
+release, i.e. the sustain part. Both parts of a beat can independently be
+boosted or attenuated by the "boost" parameters. The two "smooth" knobs
+smoothen the envelope detectors that detect the transition points. As a rule of
+thumb, the smoother the envelopes the later the detected transition
+points. They are called smooth, because they also smoothen the character of the
+boost and attenuation.
+
+The "Output level" knob selects the level of the output signal *before* it is
+mixed with the input signal according to the "Dry/Wet" knob.
+
+
+## Principle
+
+The detection uses for both parts two envelope detectors, a fast one and a slow
+one. The fast one follows the signal level upwards instantly and slowly
+releases when the signal level decreases. The slow one vice versa, it follows
+the signal level upwards slowly. Thus the fast envelope detector is always at a
+higher level as the slow one. The higher the difference the higher the boost or
+attenuation.
