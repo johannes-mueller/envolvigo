@@ -582,7 +582,6 @@ impl PluginUI for EnvolvigoUI {
                         if gain_signal.len() < displayed_sample_num {
                             gain_signal.extend(new_gain_signal);
                         }
-                        osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
                     }
@@ -596,13 +595,13 @@ impl PluginUI for EnvolvigoUI {
                         new_in_peak = new_input_signal
                             .iter()
                             .fold(in_peak, |a, &v| {
+                                osci_repaint |= v > -72.0;
                                 if v >= a {
                                     v
                                 } else {
                                     v + meter_damping_coeff * (a - v)
                                 }
                             });
-                        osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
                     }
@@ -616,13 +615,13 @@ impl PluginUI for EnvolvigoUI {
                         new_out_peak = new_output_signal
                             .iter()
                             .fold(out_peak, |a, &v| {
+                                osci_repaint |= v > 72.0;
                                 if v > a {
                                     v
                                 } else {
                                     v + meter_damping_coeff * (a - v)
                                 }
                             });
-                        osci_repaint = true;
                     } else {
                         eprintln!("expected vector of floats, got something different");
                     }
