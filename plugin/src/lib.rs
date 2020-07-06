@@ -1,10 +1,9 @@
 use std::f32::consts::PI;
 
-use itertools::izip;
 use lv2::prelude::*;
 
 #[derive(PortCollection)]
-struct Ports {
+struct PortsMono {
     enabled: InputPort<Control>,
     use_sidechain: InputPort<Control>,
     attack_boost: InputPort<Control>,
@@ -20,6 +19,27 @@ struct Ports {
     input: InputPort<Audio>,
     sidechain_input: InputPort<Audio>,
     output: OutputPort<Audio>
+}
+
+#[derive(PortCollection)]
+struct PortsStereo {
+    enabled: InputPort<Control>,
+    use_sidechain: InputPort<Control>,
+    attack_boost: InputPort<Control>,
+    attack_smooth: InputPort<Control>,
+    sustain_boost: InputPort<Control>,
+    sustain_smooth: InputPort<Control>,
+    _gain_attack: InputPort<Control>,
+    _gain_release: InputPort<Control>,
+    outgain: InputPort<Control>,
+    mix: InputPort<Control>,
+    control: InputPort<AtomPort>,
+    notify: OutputPort<AtomPort>,
+    input_left: InputPort<Audio>,
+    input_right: InputPort<Audio>,
+    sidechain_input: InputPort<Audio>,
+    output_left: OutputPort<Audio>,
+    output_right: OutputPort<Audio>,
 }
 
 #[derive(FeatureCollection)]
@@ -147,7 +167,114 @@ enum State {
 
 use State::*;
 
-#[uri("http://johannes-mueller.org/lv2/envolvigo#lv2")]
+struct EnvolvigoPorts<'a> {
+    enabled: &'a InputPort<Control>,
+    use_sidechain: &'a InputPort<Control>,
+    attack_boost: &'a InputPort<Control>,
+    attack_smooth: &'a InputPort<Control>,
+    sustain_boost: &'a InputPort<Control>,
+    sustain_smooth: &'a InputPort<Control>,
+    outgain: &'a InputPort<Control>,
+    mix: &'a InputPort<Control>,
+    control: &'a InputPort<AtomPort>,
+    notify: &'a mut OutputPort<AtomPort>,
+    input: Vec<&'a InputPort<Audio>>,
+    sidechain_input: &'a InputPort<Audio>,
+    output: Vec<&'a mut OutputPort<Audio>>
+}
+
+#[uri("http://johannes-mueller.org/lv2/envolvigo#mono")]
+struct EnvolvigoMono {
+    engine: Envolvigo,
+}
+
+#[uri("http://johannes-mueller.org/lv2/envolvigo#stereo")]
+struct EnvolvigoStereo {
+    engine: Envolvigo,
+}
+
+impl Plugin for EnvolvigoMono {
+    type Ports = PortsMono;
+
+    type InitFeatures = Features<'static>;
+    type AudioFeatures = ();
+
+    fn new(plugin_info: &PluginInfo, features: &mut Features<'static>) -> Option<Self> {
+        let sample_rate = plugin_info.sample_rate() as f32;
+        let urids: urids::URIDs = features.map.populate_collection()?;
+        let max_block_length = features
+            .options
+            .retrieve_option(urids.buf_size.max_block_length)
+            .and_then(|atom| atom.read(urids.atom.int, ()))
+            .unwrap_or(8192) as usize;
+
+        Some(Self {
+            engine: Envolvigo::new(urids, sample_rate, max_block_length)
+        })
+    }
+
+    fn run(&mut self, ports: &mut PortsMono, _features: &mut ()) {
+        let mut engine_ports = EnvolvigoPorts {
+            enabled: &ports.enabled,
+            use_sidechain: &ports.use_sidechain,
+            attack_boost: &ports.attack_boost,
+            attack_smooth: &ports.attack_smooth,
+            sustain_boost: &ports.sustain_boost,
+            sustain_smooth: &ports.sustain_smooth,
+            outgain: &ports.outgain,
+            mix: &ports.mix,
+            control: &ports.control,
+            notify: &mut ports.notify,
+            input: vec![&ports.input],
+            sidechain_input: &ports.sidechain_input,
+            output: vec![&mut ports.output],
+        };
+
+        self.engine.run(&mut engine_ports);
+    }
+}
+
+impl Plugin for EnvolvigoStereo {
+    type Ports = PortsStereo;
+
+    type InitFeatures = Features<'static>;
+    type AudioFeatures = ();
+
+    fn new(plugin_info: &PluginInfo, features: &mut Features<'static>) -> Option<Self> {
+        let sample_rate = plugin_info.sample_rate() as f32;
+        let urids: urids::URIDs = features.map.populate_collection()?;
+        let max_block_length = features
+            .options
+            .retrieve_option(urids.buf_size.max_block_length)
+            .and_then(|atom| atom.read(urids.atom.int, ()))
+            .unwrap_or(8192) as usize;
+
+        Some(Self {
+            engine: Envolvigo::new(urids, sample_rate, max_block_length)
+        })
+    }
+
+    fn run(&mut self, ports: &mut PortsStereo, _features: &mut ()) {
+        let mut engine_ports = EnvolvigoPorts {
+            enabled: &ports.enabled,
+            use_sidechain: &ports.use_sidechain,
+            attack_boost: &ports.attack_boost,
+            attack_smooth: &ports.attack_smooth,
+            sustain_boost: &ports.sustain_boost,
+            sustain_smooth: &ports.sustain_smooth,
+            outgain: &ports.outgain,
+            mix: &ports.mix,
+            control: &ports.control,
+            notify: &mut ports.notify,
+            input: vec![&ports.input_left, &ports.input_right],
+            sidechain_input: &ports.sidechain_input,
+            output: vec![&mut ports.output_left, &mut ports.output_right],
+        };
+
+        self.engine.run(&mut engine_ports);
+    }
+}
+
 struct Envolvigo {
     urids: urids::URIDs,
     ui_active: bool,
@@ -176,59 +303,68 @@ struct Envolvigo {
 
     gain_buffer: Vec<f32>,
     input_buffer: Vec<f32>,
+    output_buffer: Vec<f32>,
 
     state: State,
 }
 
-impl Plugin for Envolvigo {
-    type Ports = Ports;
+impl Envolvigo {
+    fn new(urids: urids::URIDs, sample_rate: f32, max_block_length: usize) -> Self {
+        Envolvigo {
+                ui_active: false,
+                ui_notified: false,
+                urids,
 
-    type InitFeatures = Features<'static>;
-    type AudioFeatures = ();
+                sample_rate,
 
-    fn new(plugin_info: &PluginInfo, features: &mut Features<'static>) -> Option<Self> {
-        let sample_rate = plugin_info.sample_rate() as f32;
-        let urids: urids::URIDs = features.map.populate_collection()?;
-        let max_block_length = features
-            .options
-            .retrieve_option(urids.buf_size.max_block_length)
-            .and_then(|atom| atom.read(urids.atom.int, ()))
-            .unwrap_or(8192) as usize;
+                beat_detector: BeatDetector::new(sample_rate, 0.2),
 
-        Some(Self {
-            ui_active: false,
-            ui_notified: false,
-            urids,
+                attack_smooth: EnvelopeDetector::new(sample_rate),
+                sustain_smooth: EnvelopeDetector::new(sample_rate),
 
-            sample_rate,
+                attack_slow: EnvelopeDetector::new(sample_rate),
+                attack_fast: EnvelopeDetector::new(sample_rate),
 
-            beat_detector: BeatDetector::new(sample_rate, 0.2),
+                release_slow: EnvelopeDetector::new(sample_rate),
+                release_fast: EnvelopeDetector::new(sample_rate),
 
-            attack_smooth: EnvelopeDetector::new(sample_rate),
-            sustain_smooth: EnvelopeDetector::new(sample_rate),
+                attack_boost: Dezipper::new(0.0, sample_rate),
+                sustain_boost: Dezipper::new(0.0, sample_rate),
 
-            attack_slow: EnvelopeDetector::new(sample_rate),
-            attack_fast: EnvelopeDetector::new(sample_rate),
+                result_gain: EnvelopeDetector::new(sample_rate),
 
-            release_slow: EnvelopeDetector::new(sample_rate),
-            release_fast: EnvelopeDetector::new(sample_rate),
+                outgain: Dezipper::new(1.0, sample_rate),
+                mix: Dezipper::new(1.0, sample_rate),
 
-            attack_boost: Dezipper::new(0.0, sample_rate),
-            sustain_boost: Dezipper::new(0.0, sample_rate),
+                gain_buffer: Vec::with_capacity(max_block_length),
+                input_buffer: Vec::with_capacity(max_block_length),
+                output_buffer: Vec::with_capacity(max_block_length),
 
-            result_gain: EnvelopeDetector::new(sample_rate),
-
-            outgain: Dezipper::new(1.0, sample_rate),
-            mix: Dezipper::new(1.0, sample_rate),
-
-            gain_buffer: Vec::with_capacity(max_block_length),
-            input_buffer: Vec::with_capacity(max_block_length),
-
-            state: Idle,
-        })
+                state: Idle,
+        }
     }
 
-    fn run(&mut self, ports: &mut Ports, _features: &mut ()) {
+    fn check_notification_events(&mut self, ports: &mut EnvolvigoPorts) {
+        let control_sequence = match ports
+            .control
+            .read(self.urids.atom.sequence, self.urids.unit.beat) {
+                None => return,
+                Some(cs) => cs
+            };
+
+        for (_, message) in control_sequence {
+            if let Some((header,  _)) = message.read(self.urids.atom.object, ()) {
+                if header.otype == self.urids.ui_on {
+                    self.ui_active = true;
+                    self.ui_notified = false;
+                } else if header.otype == self.urids.ui_off {
+                    self.ui_active = false;
+                }
+            }
+        }
+    }
+
+    fn run(&mut self, ports: &mut EnvolvigoPorts) {
         self.attack_fast.set_params(0.0, 0.02);
         self.attack_slow.set_params(0.02, 5.0);
 
@@ -242,22 +378,22 @@ impl Plugin for Envolvigo {
         let sustain_smooth = ports.sustain_smooth.max(0.001).min(0.2);
         self.sustain_smooth.set_params(sustain_smooth, sustain_smooth);
 
-        let (mut state, mix) = if *ports.enabled > 0.5 {
-	    (
+        let (mut state, mix) = if **ports.enabled > 0.5 {
+            (
                 match self.state {
                     Disabled => Idle,
                     state => state
                 },
                 ports.mix.max(0.0).min(1.0)
             )
-	} else {
-	    (
+        } else {
+            (
                 Disabled,
                 0.0
             )
         };
 
-        let sidechain = *ports.use_sidechain > 0.5;
+        let sidechain = **ports.use_sidechain > 0.5;
 
         self.outgain.set_value(from_dB(ports.outgain.max(-60.0).min(6.0)));
         self.mix.set_value(mix);
@@ -270,24 +406,25 @@ impl Plugin for Envolvigo {
         let mut release_point: Option<usize> = None;
         let mut idle_point: Option<usize> = None;
 
+        let n_samples = ports.input[0].len();
+
         if self.ui_active {
             self.input_buffer.clear();
-            self.input_buffer.extend(ports.input.iter().map(to_dB));
+            for i in 0..n_samples {
+                let v = ports.input.iter().fold(-160.0f32, |acc, v| acc.max(to_dB(&v[i])));
+                self.input_buffer.push(v);
+            }
         }
 
-        for ((sample_num, in_frame), out_frame, sidechain_in) in izip!(
-            ports.input.iter().enumerate(), ports.output.iter_mut(),
-            ports.sidechain_input.iter(),
-        ) {
+        for i in 0..n_samples {
             let attack_boost = self.attack_boost.process();
             let sustain_boost = self.sustain_boost.process();
 
             let lvl = if sidechain {
-                sidechain_in
+                ports.sidechain_input[i].abs()
             } else {
-                in_frame
-            }.abs();
-
+                ports.input.iter().fold(0.0f32, |acc, v| acc.max(v[i].abs()))
+            };
 
             let old_lvl = self.beat_detector.level();
             //println!("{} {} {}", lvl, old_lvl, in_frame);
@@ -300,7 +437,7 @@ impl Plugin for Envolvigo {
                     self.attack_smooth.reset(self.result_gain.level());
                     //println!("ATK {} {}", lvl, old_lvl);
                     if attack_point.is_none() {
-                        attack_point = Some(sample_num);
+                        attack_point = Some(i);
                     }
                 }
                 state = Attack;
@@ -320,7 +457,7 @@ impl Plugin for Envolvigo {
                     if pregain < 1.0 {
                         //println!("REL {} {} {} {}", lvl, delta_atk, atk_fast, atk_slow);
                         state = Release;
-                        release_point = Some(sample_num);
+                        release_point = Some(i);
                         self.release_fast.reset(atk_slow);
                         self.release_slow.reset(0.0);
                         self.sustain_smooth.reset(pregain);
@@ -342,7 +479,7 @@ impl Plugin for Envolvigo {
 
                     if to_dB(&pregain) < 0.0 {
                         //println!("IDLE {} {} {} {}", lvl, delta_rel, rel_fast, rel_slow);
-                        idle_point = Some(sample_num);
+                        idle_point = Some(i);
                         state = Idle;
                     }
                     pregain.powf(sustain_boost)
@@ -355,10 +492,12 @@ impl Plugin for Envolvigo {
 
             self.gain_buffer.push(gain);
 
-            let out = *in_frame * gain * self.outgain.process();
             let mix = self.mix.process();
-
-            *out_frame = out * mix + *in_frame * (1.0 - mix);
+            let gain = gain * self.outgain.process();
+            for (input, output) in Iterator::zip(ports.input.iter(), ports.output.iter_mut()) {
+                let out = input[i] * gain;
+                output[i] = out * mix + input[i] * (1.0 - mix);
+            }
         }
 
         self.state = state;
@@ -420,29 +559,14 @@ impl Plugin for Envolvigo {
                 object_writer.init(self.urids.output_signal, None,
                                    self.urids.atom.vector(),
                                    self.urids.atom.float).unwrap();
-            output_writer.append(ports.output.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
-        }
-    }
-}
 
-impl Envolvigo {
-    fn check_notification_events(&mut self, ports: &mut Ports) {
-        let control_sequence = match ports
-            .control
-            .read(self.urids.atom.sequence, self.urids.unit.beat) {
-                None => return,
-                Some(cs) => cs
-            };
-
-        for (_, message) in control_sequence {
-            if let Some((header,  _)) = message.read(self.urids.atom.object, ()) {
-                if header.otype == self.urids.ui_on {
-                    self.ui_active = true;
-                    self.ui_notified = false;
-                } else if header.otype == self.urids.ui_off {
-                    self.ui_active = false;
-                }
+            self.output_buffer.clear();
+            for i in 0..n_samples {
+                let v = ports.output.iter().fold(-160.0f32, |acc, v| acc.max(to_dB(&v[i])));
+                self.output_buffer.push(v);
             }
+
+            output_writer.append(&self.output_buffer);
         }
     }
 }
@@ -465,4 +589,4 @@ fn no_denormal(v: f32) -> f32 {
     }
 }
 
-lv2_descriptors!(Envolvigo);
+lv2_descriptors!(EnvolvigoMono, EnvolvigoStereo);

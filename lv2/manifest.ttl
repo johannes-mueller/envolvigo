@@ -4,7 +4,12 @@
 
 @prefix envolvigo: <http://johannes-mueller.org/lv2/envolvigo#> .
 
-envolvigo:lv2
+envolvigo:mono
+	a lv2:Plugin ;
+ 	lv2:binary <libenvolvigo_lv2.so> ;
+	rdfs:seeAlso <envolvigo.ttl> .
+
+envolvigo:stereo
 	a lv2:Plugin ;
  	lv2:binary <libenvolvigo_lv2.so> ;
 	rdfs:seeAlso <envolvigo.ttl> .
