@@ -271,7 +271,7 @@ impl EnvolvigoUI {
         let hl = ui.new_layouter::<stacklayout::HorizontalLayouter>();
         ui.pack_to_layout(hl.widget(), sect_layout, stacklayout::StackDirection::Back);
         ui.add_spacer(hl, stacklayout::StackDirection::Back);
-        let lb = ui.new_widget(jilar::Label::new("Time"));
+        let lb = ui.new_widget(jilar::Label::new("Smooth"));
         ui.pack_to_layout(lb, hl, stacklayout::StackDirection::Back);
         ui.add_spacer(hl, stacklayout::StackDirection::Back);
 
