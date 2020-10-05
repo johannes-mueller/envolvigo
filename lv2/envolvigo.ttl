@@ -37,6 +37,7 @@ envolvigo:mono
     lv2:requiredFeature urid:map ;
     lv2:requiredFeature opts:options ;
     opts:requiredOption <http://lv2plug.in/ns/ext/buf-size#maxBlockLength> ;
+    lv2:extensionData opts:interface ;
     ui:ui envolvigo:ui ;
     lv2:port [
         a lv2:InputPort , lv2:ControlPort ;

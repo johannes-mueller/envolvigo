@@ -232,6 +232,35 @@ impl Plugin for EnvolvigoMono {
 
         self.engine.run(&mut engine_ports);
     }
+
+    fn extension_data(uri: &Uri) -> Option<&'static dyn std::any::Any> {
+        println!("extension_data() called {:?} {:?}", uri, std::string::String::from_utf8(OptionsDescriptor::<Self>::URI.to_vec()));
+        let ret = match_extensions!(uri, OptionsDescriptor<Self>);
+        println!("returning {:?}", ret);
+        ret
+    }
+}
+
+impl Options for EnvolvigoMono {
+    fn get<'a>(
+        &self,
+        urid: URID,
+        subject: Subject,
+        _writer: &mut OptionWriter<'a>,
+    ) -> Result<(), OptionsErr> {
+        println!("get method called {:?} {}", subject, urid.get());
+        Ok(())
+    }
+
+    fn set(
+        &self,
+        urid: URID,
+        subject: Subject,
+        payload: UnidentifiedAtom,
+    ) -> Result<(), OptionsErr> {
+        println!("set method called {:?} {}", subject, urid.get());
+        Ok(())
+    }
 }
 
 impl Plugin for EnvolvigoStereo {
