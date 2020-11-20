@@ -8,18 +8,18 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-cascade = "0.1.4"
+cascade = "1.0.0"
 
-lv2 = "0.5.1"
-lv2-sys = "1.1.0"
+lv2 = "0.6.0"
+lv2-sys = "2.0.0"
 
-cairo-rs = "0.9.0"
-pango = "0.9.0"
+cairo-rs = "0.9.1"
+pango = "0.9.1"
 pangocairo = "0.10.0"
 
 pugl-ui = "0.2.0"
 pugl-sys = "0.3.3"
 
-jilar = { git = "https://github.com/johannes-mueller/jilar.git" }
+jilar = { git = "https://github.com/johannes-mueller/jilar.git", rev="66fd941873f643a40c22b4f12a47ea941988b96e" }
 
 urids = { path = "../urids" }

@@ -213,7 +213,7 @@ impl Plugin for EnvolvigoMono {
         })
     }
 
-    fn run(&mut self, ports: &mut PortsMono, _features: &mut ()) {
+    fn run(&mut self, ports: &mut PortsMono, _features: &mut (), _: u32) {
         let mut engine_ports = EnvolvigoPorts {
             enabled: &ports.enabled,
             use_sidechain: &ports.use_sidechain,
@@ -254,7 +254,7 @@ impl Plugin for EnvolvigoStereo {
         })
     }
 
-    fn run(&mut self, ports: &mut PortsStereo, _features: &mut ()) {
+    fn run(&mut self, ports: &mut PortsStereo, _features: &mut (), _: u32) {
         let mut engine_ports = EnvolvigoPorts {
             enabled: &ports.enabled,
             use_sidechain: &ports.use_sidechain,
@@ -518,7 +518,7 @@ impl Envolvigo {
                     }
                 ).unwrap();
 
-                object_writer.init(self.urids.parameters.sample_rate, None,
+                object_writer.init(self.urids.parameters.sample_rate,
                                    self.urids.atom.float,
                                    self.sample_rate as f32);
             }
@@ -534,29 +534,29 @@ impl Envolvigo {
             ).unwrap();
 
             if let Some(point) = attack_point {
-                object_writer.init(self.urids.attack_point, None, self.urids.atom.int, point as i32);
+                object_writer.init(self.urids.attack_point, self.urids.atom.int, point as i32);
             }
             if let Some(point) = release_point {
-                object_writer.init(self.urids.release_point, None, self.urids.atom.int, point as i32);
+                object_writer.init(self.urids.release_point, self.urids.atom.int, point as i32);
             }
             if let Some(point) = idle_point {
-                object_writer.init(self.urids.idle_point, None, self.urids.atom.int, point as i32);
+                object_writer.init(self.urids.idle_point, self.urids.atom.int, point as i32);
             }
 
             let mut gain_writer: lv2_atom::vector::VectorWriter<Float> =
-                object_writer.init(self.urids.gain_signal, None,
+                object_writer.init(self.urids.gain_signal,
                                    self.urids.atom.vector(),
                                    self.urids.atom.float).unwrap();
             gain_writer.append(self.gain_buffer.iter().map(to_dB).collect::<Vec<f32>>().as_slice());
 
             let mut input_writer: lv2_atom::vector::VectorWriter<Float> =
-                object_writer.init(self.urids.input_signal, None,
+                object_writer.init(self.urids.input_signal,
                                    self.urids.atom.vector(),
                                    self.urids.atom.float).unwrap();
             input_writer.append(&self.input_buffer);
 
             let mut output_writer: lv2_atom::vector::VectorWriter<Float> =
-                object_writer.init(self.urids.output_signal, None,
+                object_writer.init(self.urids.output_signal,
                                    self.urids.atom.vector(),
                                    self.urids.atom.float).unwrap();
 
