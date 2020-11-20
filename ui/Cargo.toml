@@ -17,9 +17,9 @@ cairo-rs = "0.9.1"
 pango = "0.9.1"
 pangocairo = "0.10.0"
 
-pugl-ui = "0.2.0"
-pugl-sys = "0.3.3"
+pugl-ui = "0.3.0"
+pugl-sys = "0.4.0"
 
-jilar = { git = "https://github.com/johannes-mueller/jilar.git", rev="66fd941873f643a40c22b4f12a47ea941988b96e" }
+jilar = { git = "https://github.com/johannes-mueller/jilar.git" }
 
 urids = { path = "../urids" }

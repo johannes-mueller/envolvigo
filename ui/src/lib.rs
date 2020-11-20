@@ -12,7 +12,7 @@ use pugl_ui::layout::stacklayout;
 use pugl_ui::widget;
 use pugl_ui::widget::Widget;
 use pugl_sys as pugl_sys;
-use pugl_sys::pugl::PuglViewTrait;
+use pugl_sys::PuglViewTrait;
 
 #[derive(FeatureCollection)]
 struct Features<'a> {
